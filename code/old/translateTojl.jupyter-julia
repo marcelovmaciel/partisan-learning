@@ -1,0 +1,168 @@
+import Pkg
+Pkg.activate(".")
+
+#foreach(Pkg.add, ("Agents", "Distributions", "DataFrames", "Dictionaries", "Distances","InteractiveDynamics", "CairoMakie", "GLMakie", "StatsBase"))
+
+import Dictionaries as DICT
+import Agents as abm
+import Distributions as distri
+import Distances as dist
+
+using GLMakie
+using Deldir
+
+v = 3000 # stub
+p = 10 # stub
+n = 2
+k = 0:8
+s = 0:2;
+
+properties = Dict(:r => 2, :c => 10, :partyids => Int64[])
+
+mutable struct Voter{n} <: abm.AbstractAgent
+    id::Int
+    pos::NTuple{n,Float64}
+    weight::NTuple{n,Int}
+end
+
+function voter_issue_generation(n,k)
+    # anchor = rand(distri.DiscreteUniform(first(k), last(k)))
+    anchor = rand(distri.Uniform(first(k), last(k)))
+    function anchored_positions(anchor)
+        # anchorp1 = (anchor == last(k) ? anchor : anchor + 1 )
+        # anchorm1 = (anchor == first(k) ? anchor : anchor - 1 )
+        anchorp1 = (anchor + 1 > last(k) ? last(k) : anchor + 1 )
+        anchorm1 = (anchor - 1 < first(k) ? first(k) : anchor - 1 )
+        return([anchor,anchorp1, anchorm1])
+        end
+    Tuple(rand(anchored_positions(anchor), n,1))
+end
+
+function weight_assigner(n,s)
+    Tuple(rand(collect(s), n,1))
+end
+
+function Voter(id,n,k,s)
+    Voter{n}(id,
+             voter_issue_generation(n,k),
+             weight_assigner(n,s))
+
+end
+
+Voter(1, n,k,s)
+
+mutable struct AnchoredParty{n} <: abm.AbstractAgent
+    id::Int
+    pos::NTuple{n,Float64}
+    share::Float64
+    end
+
+mutable struct UniformParty{n} <: abm.AbstractAgent
+    id::Int
+    pos::NTuple{n,Float64}
+    share::Float64
+end
+
+function AnchoredParty(id,n,k,share)
+    generate_party_ideology(n,k) = voter_issue_generation(n,k)
+    AnchoredParty{n}(id, generate_party_ideology(n,k), 0.)
+ end
+
+function UniformParty(id,n,k,share)
+    generate_party_ideology(n,k) =  rand(distri.Uniform(first(k), last(k)),n,1)
+    UniformParty{n}(id, generate_party_ideology(n,k), 0.)
+end
+
+function model(;
+               n = n,
+               k = k,
+               s = s,
+               v = v,
+               p = p,
+               properties = properties)
+    numagents = v + p
+    space = abm.ContinuousSpace((last(k), last(k)))
+    model = abm.ABM(Union{AnchoredParty,Voter},space, properties = properties)
+
+    for i in 1:v
+        agent = Voter(i,n,k,s)
+        abm.add_agent!(agent,model)
+    end
+
+    dummy_share = 0.
+
+    for j in v+1:((v+1)+p)
+        agent = AnchoredParty(j,n,k,dummy_share)
+        abm.add_agent!(agent,model)
+        end
+    partyids = collect(v+1:((v+p)))
+    model.properties[:partyids] = partyids
+    return model
+end
+
+m = model()
+
+map(y-> m[y], m.properties[:partyids])
+
+utility(agent,party) = -dist.weuclidean(agent.pos, party.pos, agent.weight)
+
+# function utility(agent, party)
+#     u = 0.0
+#     for (k,s,y) in zip(agent.pos,
+#                        agent.weight,
+#                        party.pos)
+#         u+= s*(k-y)^2
+#     end
+#     return(-sqrt(u))
+# end
+
+function closest_party(agent::Voter)
+    closest_party = findmax(Dict(map(partyid -> (partyid, utility(agent,
+                           ( m[partyid]))),
+                                     m.properties[:partyids])))[2]
+
+end
+
+closest_party(agent::AnchoredParty) = nothing
+
+function voteshare(partyid, votes)
+
+    d = Dict(zip(partyid, zeros(length(partyid))))
+
+    for val in partyid
+        for vote in votes
+            if isa(vote, Number) && isnan(vote)
+            continue
+        end
+            if vote == val
+                d[val] = get(d, val, 0) + 1
+            else
+                d[val] += 0
+            end
+        end
+    end
+    s = DICT.sum(DICT.Dictionary(d))
+    lastd = map(x->x/s, DICT.Dictionary(d))
+    return lastd
+end
+
+parties = map(p -> m[p]  , m.properties[:partyids])
+
+_, vor, _ = deldir(
+    map(x-> x.pos[1],parties),
+       map(x-> x.pos[2],parties),
+       [0.,8.1,0.0,8.1])
+
+Vx, Vy = edges(vor)
+
+data1 = map(x-> x.pos[1],abm.allagents(m))
+data2 = map(x-> x.pos[2],abm.allagents(m))
+
+f = Figure(resolution= (400,400))
+
+scatter(f[1,1], data1, data2, markersize = 2)
+scatter!(f[1,1], map(x-> x.pos[1],parties ),
+         map(x-> x.pos[2],parties ), color = :red)
+lines!(f[1,1],Vx,Vy)
+
+Makie.save("firstplot.png",f)

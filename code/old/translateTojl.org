@@ -1,0 +1,796 @@
+#+TITLE: Translate Tojl
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+import Pkg
+Pkg.activate(".")
+
+import Dictionaries as DICT
+import Agents as abm
+import Distributions as distri
+import Distances as dist
+
+using AlgebraOfGraphics, GLMakie
+using Deldir
+using StaticArrays
+#+END_SRC
+
+#+RESULTS:
+: [32m[1m  Activating[22m[39m environment at `~/Drive/Org/Projects/partisan-learning/code/Project.toml`
+
+* Reviewing Agents.jl
+The interface of [[https://juliadynamics.github.io/Agents.jl/stable/tutorial/][Tutorial · Agents.jl]] has changed. Let us here enunciate what ill need from it.
+
+#+begin_quote
+- Choose in what kind of space the agents will live in, for example a graph, a grid, etc. Several spaces are provided by Agents.jl and can be initialized immediately.
+- Define the agent type (or types, for mixed models) that will populate the ABM. This is defined as a standard Julia struct and contains two mandatory fields id, pos, with the position field being appropriate for the chosen space.
+- The created agent type, the chosen space, and optional additional model level properties (typically in the form of a dictionary) are provided in our universal structure AgentBasedModel. This instance defines the model within an Agents.jl simulation. Further options are also available, regarding schedulers and random number generation.
+- Provide functions that govern the time evolution of the ABM. A user can provide an agent-stepping function, that acts on each agent one by one, and/or model-stepping function, that steps the entire model as a whole. These functions are standard Julia functions that take advantage of the Agents.jl API.
+-  Collect data. To do this, specify which data should be collected, by providing one standard Julia Vector of data-to-collect for agents, and another one for the model, for example [:mood, :wealth]. The outputted data are in the form of a DataFrame.
+#+end_quote
+
+So:
+1. Choose a space;
+2. Define agent types:
+   - It *must* have those two fields:
+     - ~id~
+     - ~pos~, which depends on the space that has been chosen
+3. Define agent-step and model step functions
+4. Specify which data must be collected
+
+** Space
+#+begin_quote
+- GraphSpace: Agent positions are equivalent with nodes of a graph/network.
+- GridSpace: Space is discretized into boxes, typical style for cellular automata.
+- ContinuousSpace: Truthful representation of continuous space, regarding location, orientation, and identification of neighboring agents.
+- OpenStreetMapSpace: A space based on Open Street Map, where agents are confined to move along streets of the map, using real-world meter values for the length of each street.
+#+end_quote
+Thus, I'll probably use a ~ContinuousSpace~ (or maybe a GridSpace). Their ~@agent~ macro creates an agent with a vel field, but it is *not* required *as long as* I properly specify the ~move_agent!~ procedure. ([[https://juliadynamics.github.io/Agents.jl/stable/api/#Moving-agents][API · Agents.jl]])
+
+** Agents
+#+BEGIN_SRC jupyter-julia :session jl :tangle no
+mutable struct ExampleAgent <: AbstractAgent
+    id::Int
+    pos::Int
+    weight::Float64
+    happy::Bool
+end
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+: UndefVarError: AbstractAgent not defined
+:
+: Stacktrace:
+:  [1] top-level scope
+:    @ In[110]:1
+:  [2] eval
+:    @ ./boot.jl:360 [inlined]
+:  [3] include_string(mapexpr::typeof(REPL.softscope), mod::Module, code::String, filename::String)
+:    @ Base ./loading.jl:1116
+:END:
+
+Among the many functions in their api, pay attention to the existence of move_agent! and kill_agent!
+#+begin_quote
+Once an agent is created it can be added to a model using e.g. add_agent!. Then, the agent can interact with the model and the space further by using e.g. ~move_agent!~ or ~kill_agent!~.
+#+end_quote
+** ABM
+There aint much to say about the ABM constructor. It is straightforward to grok it. The ~model.properties~ stuff, though, is something to pay attention to.
+
+** Evolving the model
+One has to at least define an ~agent_step!~ procedure. I will probably need to define a ~model_step!~.
+
+They argue that if the stepping is complex it may be better to define everything inside the ~model_step!~ and use a ~dummy_step!~ as ~agent_step!~. See [[https://juliadynamics.github.io/Agents.jl/stable/tutorial/#Advanced-stepping][Tutorial · Agents.jl]].
+
+
+** Collecting the data
+One uses the ~run~ proc, filling it with the appropriate values. See [[https://juliadynamics.github.io/Agents.jl/stable/tutorial/#.-Collecting-data][Tutorial · Agents.jl]]. It returns *two* dfs, one for the agents another for the model.
+
+
+* The initial condition
+
+** Model Attributes
+- Number of voters ~v~ (=?=)
+- Number of parties ~p~ (=?=)
+
+- ~n~ number of issues (=2=)
+- ~k~ range of issue positions (=0:8=)
+- ~s~ range of issue positions (=0:2=)
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+v = 3000 # stub
+p = 10 # stub
+n = 2
+k = 0:8
+s = 0:2;
+#+END_SRC
+
+#+RESULTS:
+
+- The generator of voters positions
+  - Defined below
+- The generator of voters weights;
+  - defined below
+- The generator of parties positions;
+  - defined below
+
+
+- The radius of exploration ~r~
+- The campaign cycle size ~c~
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+properties = Dict(:r => 2, :c => 10, :partyids => Int64[])
+#+END_SRC
+
+#+RESULTS:
+: Dict{Symbol, Any} with 3 entries:
+:   :c        => 10
+:   :r        => 2
+:   :partyids => Int64[]
+
+** Voters Attributes
+- Ideology: \(k\) positions in \(n\) issues;
+- Salience: \(s\) weights in \(n\) issues
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+mutable struct Voter{n} <: abm.AbstractAgent
+    id::Int
+    pos::NTuple{n,Float64}
+    id_pos::MVector{n,Float64}
+    weight::MVector{n,Int}
+end
+
+
+function voter_issue_generation(n,k)
+    # anchor = rand(distri.DiscreteUniform(first(k), last(k)))
+    anchor = rand(distri.Uniform(first(k), last(k)))
+    function anchored_positions(anchor)
+        # anchorp1 = (anchor == last(k) ? anchor : anchor + 1 )
+        # anchorm1 = (anchor == first(k) ? anchor : anchor - 1 )
+        anchorp1 = (anchor + 1 > last(k) ? last(k) : anchor + 1 )
+        anchorm1 = (anchor - 1 < first(k) ? first(k) : anchor - 1 )
+        return(anchorm1, anchorp1)
+        end
+    MVector{n}(rand(distri.Uniform(anchored_positions(anchor)...), n,1)) #Tuple(rand(anchored_positions(anchor), n,1))
+end
+
+function weight_assigner(n,s)
+    MVector{n}(rand(collect(s), n,1))
+end
+
+function Voter(id,n,k,s)
+    ideology= voter_issue_generation(n,k)
+    Voter{n}(id,
+            Tuple(ideology),
+             ideology,
+             weight_assigner(n,s))
+
+end
+
+#+END_SRC
+
+#+RESULTS:
+: Voter
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+Voter(1, n,k,s)
+#+END_SRC
+
+#+RESULTS:
+: Voter{2}(1, (6.823756670861526, 6.823756670861526), [6.823756670861526, 6.823756670861526], [0, 0])
+
+** Parties attributes
++ Party platform which is equal to \(k\) positions in \(n\) issues;
++ Vote share;
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+mutable struct AnchoredParty{n} <: abm.AbstractAgent
+    id::Int
+    pos::NTuple{n,Float64}
+    id_pos::MVector{n,Float64}
+    share::Float64
+    end
+
+mutable struct UniformParty{n} <: abm.AbstractAgent
+    id::Int
+    pos::MVector{n,Float64}
+    id_pos::MVector{n,Float64}
+    share::Float64
+end
+
+
+function AnchoredParty(id,n,k,share)
+    generate_party_ideology(n,k) = voter_issue_generation(n,k)
+    ideology = generate_party_ideology(n,k)
+    AnchoredParty{n}(id, Tuple(ideology), ideology, 0.)
+ end
+
+
+function UniformParty(id,n,k,share)
+    generate_party_ideology(n,k) =  MVector{n}(rand(distri.Uniform(first(k), last(k)),n,1))
+    ideology = generate_party_ideology(n,k)
+    UniformParty{n}(id, Tuple(ideology), ideology, 0.)
+end
+
+#+END_SRC
+
+#+RESULTS:
+: UniformParty
+
+** Some secondary attributes
+Basically, some helpers to define parties vote shares.
+
+#+BEGIN_SRC jupyter-julia :session jl
+AnchoredParty(1,n,k,0.)
+#+END_SRC
+
+#+RESULTS:
+: AnchoredParty{2}(1, (2.3221035519507414, 2.3221035519507414), [2.3221035519507414, 2.3221035519507414], 0.0)
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+utility(agent,party) = -dist.weuclidean(agent.id_pos, party.id_pos, agent.weight)
+
+function getparties(model)
+    parties = DICT.Dictionary(model.properties[:partyids],
+                              map(x->model[x], model.properties[:partyids]))
+
+end
+
+function closest_party(agent::Voter, parties)
+    argmax(Dict(map(p-> p.id=>utility(agent, p), parties)))
+    end
+
+closest_party(agent::AnchoredParty, parties) = nothing
+
+#+END_SRC
+
+#+RESULTS:
+: closest_party (generic function with 2 methods)
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function vote_shares(partyid, votes)
+    d = Dict(zip(partyid, zeros(length(partyid))))
+    for val in partyid
+        for vote in votes
+            if isa(vote, Number) && isnan(vote)
+            continue
+        end
+            if vote == val
+                d[val] = get(d, val, 0) + 1
+            else
+                d[val] += 0
+            end
+        end
+    end
+
+    s = DICT.sum(DICT.Dictionary(d))
+
+    lastd = map(x->x/s, DICT.Dictionary(d))
+
+    return lastd
+end
+
+function set_shares!(model)
+    parties = DICT.Dictionary(model.properties[:partyids],
+                              map(x->model[x], model.properties[:partyids]))
+    votes = map(a->closest_party(a,parties), abm.allagents(model));
+    shares = vote_shares(model.properties[:partyids], votes)
+    for agent_index in model.properties[:partyids]
+        model[agent_index].share = shares[agent_index]
+    #    println(m[agent_index].pos,m[agent_index].id_pos)
+    end
+end
+
+#+END_SRC
+
+#+RESULTS:
+: set_shares! (generic function with 1 method)
+
+
+** Model initialization
+
+Finally, we create the model:
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function model(;
+               n = n,
+               k = k,
+               s = s,
+               v = v,
+               p = p,
+               properties = properties)
+    numagents = v + p
+    space = abm.ContinuousSpace((last(k), last(k)))
+    model = abm.ABM(Union{AnchoredParty,Voter},space, properties = properties)
+
+    for i in 1:v
+        agent = Voter(i,n,k,s)
+        abm.add_agent!(agent,model)
+    end
+
+    dummy_share = 0.
+
+    for j in v+1:((v+p))
+        agent = AnchoredParty(j,n,k,dummy_share)
+        abm.add_agent!(agent,model)
+    #    println(agent)
+        end
+
+    for j in v+1:((v+p))
+        model[j].pos = Tuple(model[j].id_pos)
+     #   println(model[j])
+    end
+
+    partyids = collect(v+1:(v+p))
+    model.properties[:partyids] = partyids
+#    println(model[v+1])
+    set_shares!(model)
+    return model
+end
+
+#+END_SRC
+
+#+RESULTS:
+: model (generic function with 1 method)
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+m = model()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+: ┌ Warning: AgentType is not concrete. If your agent is parametrically typed, you're probably seeing this warning because you gave `Agent` instead of `Agent{Float64}` (for example) to this function. You can also create an instance of your agent and pass it to this function. If you want to use `Union` types for mixed agent models, you can silence this warning.
+: └ @ Agents /home/marcelovmaciel/.julia/packages/Agents/suBkf/src/core/model.jl:297
+: AgentBasedModel with 3010 agents of type Union{AnchoredParty, Voter}
+:  space: periodic continuous space with 10×10 divisions
+:  scheduler: fastest
+:  properties: c, r, partyids
+:END:
+#+RESULTS:
+
+
+#+BEGIN_SRC jupyter-julia :session jl
+m[3006]
+#+END_SRC
+
+#+RESULTS:
+: AnchoredParty{2}(3006, (6.136765256343152, 6.2496741641434195), [6.136765256343152, 6.2496741641434195], 0.05733333333333333)
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+parties = getparties(m)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+10-element Dictionaries.Dictionary{Int64, AnchoredParty{2}}
+ 3001 │ AnchoredParty{2}(3001, (4.174199218224673, 4.1310625722864955), [4.1741…
+ 3002 │ AnchoredParty{2}(3002, (0.0787468650409045, 0.4122890877911605), [0.078…
+ 3003 │ AnchoredParty{2}(3003, (1.295816629792355, 1.0192259988589103), [1.2958…
+ 3004 │ AnchoredParty{2}(3004, (6.653398469974148, 6.706882297403322), [6.65339…
+ 3005 │ AnchoredParty{2}(3005, (0.14198719553506864, 0.8518255053821284), [0.14…
+ 3006 │ AnchoredParty{2}(3006, (1.6942578481398893, 1.8812809571048676), [1.694…
+ 3007 │ AnchoredParty{2}(3007, (0.27832392806558787, 1.1143203973690632), [0.27…
+ 3008 │ AnchoredParty{2}(3008, (2.5317375739048877, 2.1380860232130128), [2.531…
+ 3009 │ AnchoredParty{2}(3009, (4.360970402903715, 4.0337581305761745), [4.3609…
+ 3010 │ AnchoredParty{2}(3010, (4.944149361174814, 4.848479843749618), [4.94414…
+#+end_example
+
+* The stepping
+- Campaign procedure:
+  1. Parties send signal about issue salience to all voters;
+  2. Voters update, probabilistically, their salience;
+  3. Voters interact and update their most salient positions;
+  4. Parties test a random position within a range of their current position.
+     Note two things:
+     a) They keep other parties positions fixed;
+     b) Their calculus takes into account the current issue/weight distributions!
+  Repeat that ~c~ times.
+
+- Election procedure
+  1. Parties pick the position with highest vote share they found in their campaign exploration;
+  2. Determine vote shares;
+
+** Salience Signal Action helpers
+
+Within the radius of exploration, (all voters in which \(\|\text{party platform}-\text{voter ideology}\|_{2} \leq \mathbf{r} \) ) test raising an issue value for everybody within that range. If this would bring more votes to the party, in this range, it sends the positive signal to the whole population [campaign iteration]. Do the same for a negative signal.
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+voters = let vs = Vector{Voter}(undef,v)
+    for i in 1:v
+    vs[i] = (@inbounds m[i])
+    end
+    vs
+end;
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function get_voters_withinradius(p,voters)::Vector{Voter}
+    voters[(a->dist.euclidean(a.id_pos,p.id_pos)).(voters) .<  m.properties[:r]]
+end
+#+END_SRC
+
+#+RESULTS:
+: get_voters_withinradius (generic function with 1 method)
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function getparties_spheres(parties,voters)
+    map(p->get_voters_withinradius(p, voters), parties)
+end
+#+END_SRC
+
+#+RESULTS:
+: getparties_spheres (generic function with 1 method)
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+prties_spheres = getparties_spheres(parties, voters);
+#+END_SRC
+
+#+RESULTS:
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function whichsignal(nissues)
+    issues = collect(1:nissues)
+    pos1 = rand(issues)
+    pos2 = rand(issues)
+    if pos1 == pos2
+        deleteat!(issues, findall(x->x==pos1,issues)) # deletes all elements that have a certain value from an array
+        pos2 = rand(issues)
+        end
+    signals = (positive = pos1 , negative = pos2 )
+    end
+#+END_SRC
+
+#+RESULTS:
+: whichsignal (generic function with 1 method)
+
+If the salience is already the highest the agent will not add the positive signal to it.
+If the salience of the other issue is the lowest the agent will not add the negative signal to it.
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function positive_signalfn(x::Voter, positive_signal_index)
+    weight = copy(x.weight)
+    if weight[positive_signal_index] == last(s)
+       weight[positive_signal_index] += 0
+    else
+        weight[positive_signal_index] += 1
+    end
+        return(weight)
+end
+
+function negative_signalfn(x::Voter, nsi)
+    weight = copy(x.weight)
+    if weight[nsi] == first(s)
+        weight[nsi] += 0
+    else
+        weight[nsi] -= 1
+    end
+    return(weight)
+end
+
+#+END_SRC
+
+#+RESULTS:
+: negative_signalfn (generic function with 1 method)
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function shares_psphere(p, prties_spheres)
+    share = vote_shares(m.properties[:partyids], map(a->closest_party(a,parties), prties_spheres[p.id]))
+end
+#+END_SRC
+
+#+RESULTS:
+: shares_psphere (generic function with 1 method)
+
+#+BEGIN_SRC jupyter-julia :session jl
+shares_psphere(m[3001], prties_spheres)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+10-element Dictionaries.Dictionary{Int64, Float64}
+ 3001 │ 0.5221729490022173
+ 3005 │ 0.14523281596452328
+ 3010 │ 0.0011086474501108647
+ 3009 │ 0.0
+ 3006 │ 0.013303769401330377
+ 3008 │ 0.12195121951219512
+ 3002 │ 0.0
+ 3003 │ 0.0
+ 3007 │ 0.1385809312638581
+ 3004 │ 0.057649667405764965
+#+end_example
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function closest_party_newWeight(agent, new_weight, parties = parties)
+    oldweight = copy(agent.weight)
+    agent.weight = new_weight
+    cp = closest_party(agent, parties)
+    agent.weight = oldweight
+    return(cp)
+    end
+
+function testsignals(p, prties_spheres, n=n)
+    signal = whichsignal(n)
+    test_positive = vote_shares(m.properties[:partyids],
+                                map(x-> closest_party_newWeight(x, positive_signalfn(x, signal.positive)), prties_spheres[p.id]))
+    test_negative = vote_shares(m.properties[:partyids],
+                                map(x-> closest_party_newWeight(x, negative_signalfn(x, signal.negative)), prties_spheres[p.id]))
+    return(positive = test_positive, negative = test_negative, signal = signal)
+end
+
+#+END_SRC
+
+#+RESULTS:
+: testsignals (generic function with 2 methods)
+
+#+BEGIN_SRC jupyter-julia :session jl
+testsignals(m[3001],prties_spheres)
+#+END_SRC
+
+#+RESULTS:
+: (positive = {3001 = 0.601589103291714, 3005 = 0.11350737797956867, 3010 = 0.0, 3009 = 0.0011350737797956867, 3006 = 0.0, 3008 = 0.0, 3002 = 0.029511918274687854, 3003 = 0.2122587968217934, 3007 = 0.0, 3004 = 0.04199772985244041}, negative = {3001 = 0.713961407491487, 3005 = 0.11350737797956867, 3010 = 0.0, 3009 = 0.0011350737797956867, 3006 = 0.0, 3008 = 0.0, 3002 = 0.02383654937570942, 3003 = 0.11577752553916004, 3007 = 0.0, 3004 = 0.03178206583427923}, signal = (positive = 2, negative = 1))
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function send_signal(p, prties_spheres = prties_spheres)
+    status_quo_share = shares_psphere(p, prties_spheres)[p.id]
+    counterfactuals = testsignals(p, prties_spheres);
+    positive_counterfactual_share = counterfactuals.positive[p.id]
+    negative_counterfactual_share = counterfactuals.negative[p.id]
+    send_positive = positive_counterfactual_share > status_quo_share
+    send_negative = negative_counterfactual_share > status_quo_share
+
+    shouldsend = (positive= send_positive,
+                  negative = send_negative)
+    whichsignal = counterfactuals.signal
+    return(shouldsend = shouldsend, whichsignal=whichsignal)
+end
+
+#+END_SRC
+
+#+RESULTS:
+: send_signal (generic function with 2 methods)
+
+#+BEGIN_SRC jupyter-julia :session jl
+send_signal(m[3001])
+#+END_SRC
+
+#+RESULTS:
+: (shouldsend = (positive = false, negative = true), whichsignal = (positive = 1, negative = 2))
+
+** Explorer helpers
+The platform repositioning: explorer rule:
+- Parties test a random position within a range of their current position [end
+  of each iteration of the campaign cycle];
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function sampleposition_withinradius(p,r=m.properties[:r], k = k)
+    x,y = p.pos
+
+    function cropvalue(tentativevalue)
+        if tentativevalue > last(k)
+            tentativevalue = Float64(last(k))
+        elseif tentativevalue < first(k)
+            tentativevalue = Float64(first(k))
+        else
+            tentativevalue = tentativevalue
+        end
+        return(tentativevalue)
+    end
+
+    newx = cropvalue(rand(distri.Uniform(x-r, x+r)))
+    newy = cropvalue(rand(distri.Uniform(y-r,y+r)))
+
+    return(newx,newy)
+end
+#+END_SRC
+
+#+RESULTS:
+: sampleposition_withinradius (generic function with 3 methods)
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+
+function test_newposition(p, prties_spheres = prties_spheres, parties= parties)
+
+    status_quo_share = shares_psphere(p, prties_spheres)[p.id]
+#    println(status_quo_share))
+
+    old_position = copy(p.id_pos)
+
+    new_position = sampleposition_withinradius(p)
+
+    p.id_pos = new_position
+
+    newpartieslist = map(i->m[i],m.properties[:partyids])
+
+    new_share = vote_shares(
+        m.properties[:partyids],
+        map(a->closest_party(a, newpartieslist), prties_spheres[p.id]))[p.id]
+
+    p.id_pos = old_position
+
+    if new_share > status_quo_share
+        ret = new_position
+    else
+        ret = old_position
+        end
+
+    return(ret)
+
+end
+
+#+END_SRC
+
+#+RESULTS:
+: test_newposition (generic function with 3 methods)
+
+** Voter weight update
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function update_weight!(voter,party, prties_spheres = prties_spheres )
+
+    similarity = 1-dist.cosine_dist(voter.id_pos, party.id_pos)
+    mc = distri.Uniform(0,1)
+    signalstuff= send_signal(party)
+
+    if rand(mc) < similarity && signalstuff.shouldsend.positive
+        voter.weight = positive_signalfn(voter, signalstuff.whichsignal.positive)
+        end
+
+    if rand(mc) < similarity && signalstuff.shouldsend.negative
+        voter.weight = negative_signalfn(voter,signalstuff.whichsignal.negative)
+    end
+end
+
+#+END_SRC
+
+#+RESULTS:
+: update_weight! (generic function with 2 methods)
+
+
+** Opinion Dynamics
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+function axelrod_update!(voter,model)
+
+    neighbor = abm.random_agent(model, x->typeof(x) == Voter)
+    voterpos,neighborpos = MVector{n}(voter.pos),MVector{n}(neighbor.pos)
+
+    similarity = 1-dist.cosine_dist(voterpos, neighborpos)
+    mostsalient_issue = argmax(m.weight)
+
+    mc = distri.Uniform(0,1)
+
+    newissuepos() = (voter.id_pos[mostsalient_issue]*voter.weight[mostsalient_issue] + neighbor.id_pos[mostsalient_issue]*neighbor.weight[mostsalient_issue])/(neighbor.weight[mostsalient_issue] + voter.weight[mostsalient_issue])
+
+    if rand(mc) < similarity
+    voter.id_pos[mostsalient_issue] = newissuepos()
+    end
+
+end
+#+END_SRC
+
+
+* Visualization
+
+#+BEGIN_SRC jupyter-julia :session jl
+
+resolution = (400, 400)
+fig = Figure(; resolution)
+ax = Axis(fig[1, 1], title="Some plot")
+
+
+hist!(fig[1,1], foo)
+fig
+#+END_SRC
+
+#+RESULTS:
+[[file:./.ob-jupyter/faa3ee55fdf063a7f710f2033c7fb7d9f62c6ad7.png]]
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+_, vor, _ = deldir(
+    map(x-> x.pos[1],parties),
+       map(x-> x.pos[2],parties),
+       [0.,8.1,0.0,8.1]);
+
+Vx, Vy = edges(vor);
+
+data1 = map(x-> x.pos[1],abm.allagents(m));
+data2 = map(x-> x.pos[2],abm.allagents(m));
+
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+f = Figure(resolution= (400,200))
+
+scatter(f[1,1], data1, data2, markersize = 2)
+scatter!(f[1,1], map(x-> x.pos[1],parties ),
+         map(x-> x.pos[2],parties ), color = :red)
+lines!(f[1,1],Vx,Vy)
+
+Makie.save("firstplot.png",f)
+#+END_SRC
+
+#+RESULTS:
+: ce6d9949-9c1f-4b1a-888f-088c51dcdd90
+#+RESULTS:
+
+#+BEGIN_SRC jupyter-julia :session jl
+f
+#+END_SRC
+
+#+RESULTS:
+: 2f0c33b4-e7eb-4199-8047-adc1db9b3a72
+
+#+BEGIN_SRC jupyter-julia :session jl
+
+parties = getparties(m)
+votes = map(a->closest_party(a,parties), abm.allagents(m));
+shares = vote_shares(m.properties[:partyids], votes)
+
+
+#+END_SRC
+
+#+RESULTS:
+: 075e78fa-6d37-4336-bebf-831cfc399482
+
+
+#+BEGIN_SRC jupyter-julia :session jl :tangle yes
+is, ss = collect(zip([(k,v) for (k,v) in pairs(shares)]...));
+is = [i for i in is];
+ss = [s for s in ss];
+df = (votes = [Int64(i) for i in filter(x->!isnothing(x),votes)], is=is)
+
+# for ae in ag
+#     Axis(ae).xticklabelrotation[] = π/2
+# end
+
+#+END_SRC
+
+#+RESULTS:
+: fbfc6000-28f1-4367-bf1f-8bab3e57e0f2
+
+#+BEGIN_SRC jupyter-julia :session jl
+axis  = (width = 200, height = 225. )
+
+plt = data(df) * frequency() * mapping(:votes)
+
+a = draw(plt;axis)
+
+#+END_SRC
+
+#+RESULTS:
+: bd0fb7e5-5345-440f-ad04-4f1399761611
+
+
+
+#+BEGIN_SRC jupyter-julia :session jl
+
+resolution = (800, 400)
+fig = Figure(; resolution)
+ax = Axis(fig[1, 1], title="Some plot")
+
+axis  = (width = 200, height = 225. )
+
+plt = data(df) * frequency() * mapping(:votes)
+
+ag = draw!(plt;ax)
+
+for ae in ag
+p    Axis(ae).xticklabelrotation[] = π/2
+end
+
+#+END_SRC
+
+#+RESULTS:
+: 9752e82c-5bb0-4ff1-92ce-70a756df692e
+*
