@@ -1,9 +1,34 @@
 import Pkg
 Pkg.activate("../")
-include("../src/PartisanLearning.jl")
 
+using Revise
+
+using PartisanLearning
 # * Visualization
 
+foo = ModelParams()
+
+foo |> typeof
+
+Parameters.@unpack foo
+
+param.v,
+param.p,
+param.n,
+param.k,
+param.s,
+param.c,
+param.r,
+param.voterids,
+param.partyids,
+
+v, p, n, k, s, c, r, voterids, partyids = Parameters.@unpack foo
+
+Dict((x->(fn=>getfield(x, fn) for fn ∈ fieldnames(typeof(x))))(foo))
+
+typeof(foo) |>fieldnames
+
+typedict(foo)
 
 
 agent_colors(a) = typeof(a) == Voter{2} ? "#2b2b33" :  "#bf2642"
@@ -69,4 +94,5 @@ df = (votes = [Int64(i) for i in filter(x->!isnothing(x),votes)], is=is)
 
 # for ae in ag
 #     Axis(ae).xticklabelrotation[] = π/2
-# end
+# e
+end

@@ -1,0 +1,71 @@
+#+TITLE: Todo
+* TODO [#A] Read the following papers
+- [X] cite:falmagne2019stochastic
+  #+begin_src latex
+@incollection{falmagne2019stochastic,
+  title = {A stochastic model for the evolution of preferences},
+  author = {Falmagne, Jean-Claude and Regenwetter, Michel and Grofman, Bernard},
+  booktitle = {Choice, decision, and measurement: Essays in honor of R. Duncan Luce},
+  pages = {111--129},
+  year = {2019},
+  publisher = {Routledge},
+}
+
+  #+end_src
+- [X] cite:acemoglu10_opinion_dynam_learn_social_networ
+   #+begin_src latex
+     @article{acemoglu10_opinion_dynam_learn_social_networ,
+         author = {Daron Acemoglu and Asuman Ozdaglar}, title = {Opinion Dynamics and    Learning in Social Networks}, journal = {Dynamic Games and Applications},    volume = {1}, number = {1}, pages = {3-49}, year = {2010}, doi =    {10.1007/s13235-010-0004-1}, url =    {https://doi.org/10.1007/s13235-010-0004-1}, DATE_ADDED = {Thu Jun 17    16:16:44 2021},}
+    #+end_src
+- [X] cite:grofman04_downs_two_party_conver
+  #+begin_src latex
+@article{grofman04_downs_two_party_conver,
+  author = {Bernard Grofman},
+  title = {Downs and Two-Party Convergence},
+  journal = {Annual Review of Political Science},
+  volume = {7},
+  number = {1},
+  pages = {25-46},
+  year = {2004},
+  doi = {10.1146/annurev.polisci.7.012003.104711},
+  url = {https://doi.org/10.1146/annurev.polisci.7.012003.104711},
+  DATE_ADDED = {Sat Feb 6 12:27:55 2021},
+}
+
+  #+end_src
+- My notes about axelrod model and quick look at flache
+  - cite:flache2017
+  - cite:maciel2018emergencia
+- I believe this paper is also useful cite:grofman1990efficient !
+- [X] see [[file:notes/ephnotes/degrootreview.pdf]]
+- [X] cite:holland1996hidden
+  - Particularly, what he has to say about tagging;
+
+* DONE [#A] spell out my model ideas
+See [[file:notes/15-06-21-grofman.org][last meeting notes]]
+
+
+* DONE [#A] send email to grofman
+SCHEDULED: <2021-07-07 qua>
+Discuss the following points:
+- The connection between the tag idea with cite:holland1996hidden mechanism of
+  tag
+- My idea about the path vs connection using some kind of decay factor
+- Ask him about literature that could point out how to use institutions as molds
+  of consensus/divergence
+
+* DONE Code the model iteration procedures ( ongoing);
+SCHEDULED: <2021-08-06 sex>
+- Fix the pos stuff
+- Fix
+
+* TODO Anything radius related should use nearby_ids proc
+
+* TODO write MWE of pos error
+
+* TODO  Fix the anchor issue generator
+* TODO Code the systemic variables to be collected while running the model;
+* TODO Code an interactive widget to explore the model  (and generate an executable, if possible, to send to you);
+* TODO Write unit*tests for potential bugs;
+* TODO Optimize the code;
+* TODO Code a sensitivity analysis.

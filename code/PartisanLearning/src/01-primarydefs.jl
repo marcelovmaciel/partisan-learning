@@ -1,14 +1,19 @@
 # * The initial condition
 
 # ** Model Attributes
-v = 3000 # stub
-p = 10 # stub
-n = 2
-k = 0:8
-s = 0:2
-c = 10;
 
-properties = Dict(:r => 3, :c => 10, :partyids => Int64[])
+
+@kwdef  struct ModelParams
+    v = 3000
+    p = 10
+    n = 2
+    k = 0:8
+    s = 0:2
+    c = 10
+    r = 3
+    voterids = 1:v
+    partyids = v+1:((v+p))
+end
 
 
 # ** Voters Attributes
@@ -137,24 +142,25 @@ end
 
 # ** Model initialization
 
-function model(;
-               n = n,
-               k = k,
-               s = s,
-               v = v,
-               p = p,
-               properties = properties)
-    numagents = v + p
+function model(param::ModelParams)
+
+    v, p, n, k, s, c, r, voterids, partyids = param.v, param.p, param.n, param.k, param.s, param.c, param.r, param.voterids, param.partyids
+    function
+        typedict(params) Dict((x->(fn=>getfield(x, fn) for fn ∈
+            fieldnames(typeof(x))))(param)) end
+
+    properties = typedict(param)
+
     space = abm.ContinuousSpace((last(k), last(k)))
     model = abm.ABM(Union{AnchoredParty,Voter},space, properties = properties)
 
-    for i in 1:v
+    for i in voterids
         agent = Voter(i,n,k,s)
         abm.add_agent!(agent,model)
     end
 
 
-   for i in 1:v
+   for i in voterids
         model[i].id_pos = MVector{n}(model[i].pos...)
 
      #   println(model[j])
@@ -162,31 +168,28 @@ function model(;
 
     dummy_share = 0.
 
-    for j in v+1:((v+p))
+    for j in partyids
         agent = AnchoredParty(j,n,k,dummy_share)
         abm.add_agent!(agent,model)
     #    println(agent)
         end
 
-    for j in v+1:((v+p))
+    for j in partyids
         model[j].id_pos = MVector{n}(model[j].pos...)
 
      #   println(model[j])
     end
 
-    partyids = collect(v+1:(v+p))
-    model.properties[:partyids] = partyids
 #    println(model[v+1])
     set_shares!(model)
 
     # this is potentially wrong!!! The radius_share differs from the whole share!!!
-    for j in v+1:((v+p))
+    for j in partyids
         model[j].potential_pos = (position = model[j].id_pos,  radius_share = model[j].share)
      #   println(model[j])
     end
 
     return model
-
 end
 
 # *  The stepping
@@ -447,26 +450,7 @@ function electoral_iteration!(m)
     set_shares!(m)
 end
 
-
 function model_step!(m)
     campaign_cycle!(m)
     electoral_iteration!(m)
 end
-
-#m = model()
-
-#abm.run!(m, abm.dummystep, model_step!, 10)
-
-#m[3001] |> typeof |> fieldnames
-
-
-# fig, abmstepper = abm_plot(m; ac = agent_colors, as = agent_size)
-# fig
-
-
-
-
-# abm.run!(m, abm.dummystep, model_step!, 10)
-
-# fig2, abmstepper2 = abm_plot(m; ac = agent_colors)
-# fig2
