@@ -1,4 +1,4 @@
 using Test
-using PartisanLearning
+import PartisanLearning
 
 @test true

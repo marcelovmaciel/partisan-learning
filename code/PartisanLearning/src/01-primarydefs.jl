@@ -2,8 +2,7 @@
 
 # ** Model Attributes
 
-
-@kwdef  struct ModelParams
+@kwdef struct ModelParams
     v = 3000
     p = 10
     n = 2
@@ -23,7 +22,6 @@ mutable struct Voter{n} <: abm.AbstractAgent
     id_pos::MVector{n,Float64}
     weight::MVector{n,Int}
 end
-
 
 function voter_issue_generation(n,k)
     # anchor = rand(distri.DiscreteUniform(first(k), last(k)))
@@ -101,9 +99,11 @@ function getparties(model)
 
 end
 
+
 function closest_party(agent::Voter, parties)
     argmax(Dict(map(p-> p.id=>utility(agent, p), parties)))
-    end
+end
+
 
 closest_party(agent::AnchoredParty, parties) = nothing
 
@@ -145,9 +145,10 @@ end
 function model(param::ModelParams)
 
     v, p, n, k, s, c, r, voterids, partyids = param.v, param.p, param.n, param.k, param.s, param.c, param.r, param.voterids, param.partyids
-    function
-        typedict(params) Dict((x->(fn=>getfield(x, fn) for fn ∈
-            fieldnames(typeof(x))))(param)) end
+    function typedict(params)
+        Dict((x->(fn=>getfield(x, fn) for fn ∈
+            fieldnames(typeof(x))))(param))
+    end
 
     properties = typedict(param)
 
@@ -159,11 +160,8 @@ function model(param::ModelParams)
         abm.add_agent!(agent,model)
     end
 
-
-   for i in voterids
+    for i in voterids
         model[i].id_pos = MVector{n}(model[i].pos...)
-
-     #   println(model[j])
     end
 
     dummy_share = 0.
@@ -171,35 +169,28 @@ function model(param::ModelParams)
     for j in partyids
         agent = AnchoredParty(j,n,k,dummy_share)
         abm.add_agent!(agent,model)
-    #    println(agent)
         end
-
     for j in partyids
         model[j].id_pos = MVector{n}(model[j].pos...)
-
-     #   println(model[j])
     end
-
-#    println(model[v+1])
     set_shares!(model)
 
     # this is potentially wrong!!! The radius_share differs from the whole share!!!
     for j in partyids
         model[j].potential_pos = (position = model[j].id_pos,  radius_share = model[j].share)
-     #   println(model[j])
     end
-
     return model
 end
 
+
 # *  The stepping
 # ** Salience signal
-function get_voters_withinradius(p,voters)::Vector{Voter}
+function get_voters_withinradius(p,voters, m)::Vector{Voter}
     voters[(a->dist.euclidean(a.id_pos,p.id_pos)).(voters) .<  m.properties[:r]]
 end
 
-function getparties_spheres(parties,voters)
-    map(p->get_voters_withinradius(p, voters), parties)
+function getparties_spheres(parties,voters,m)
+    map(p->get_voters_withinradius(p, voters,m), parties)
 end
 
 function whichsignal(nissues)
@@ -213,9 +204,9 @@ function whichsignal(nissues)
     signals = (positive = pos1 , negative = pos2 )
     end
 
-function positive_signalfn(x::Voter, positive_signal_index)
+function positive_signalfn(x::Voter, positive_signal_index;m=m)
     weight = copy(x.weight)
-    if weight[positive_signal_index] == last(s)
+    if weight[positive_signal_index] == last(m.properties[:s])
        weight[positive_signal_index] += 0
     else
         weight[positive_signal_index] += 1
@@ -223,9 +214,9 @@ function positive_signalfn(x::Voter, positive_signal_index)
         return(weight)
 end
 
-function negative_signalfn(x::Voter, nsi)
+function negative_signalfn(x::Voter, nsi;m=m)
     weight = copy(x.weight)
-    if weight[nsi] == first(s)
+    if weight[nsi] == first(m.properties[:s])
         weight[nsi] += 0
     else
         weight[nsi] -= 1
@@ -233,7 +224,7 @@ function negative_signalfn(x::Voter, nsi)
     return(weight)
 end
 
-function shares_psphere(p, prties_spheres, parties)
+function shares_psphere(p, prties_spheres, parties,m)
     share = vote_shares(m.properties[:partyids], map(a->closest_party(a,parties), prties_spheres[p.id]))
 end
 
@@ -245,24 +236,24 @@ function closest_party_newWeight(agent, new_weight, parties = parties)
     return(cp)
     end
 
-function testsignals(p, prties_spheres; n=n, parties = parties)
+function testsignals(p, prties_spheres; parties = parties,m=m)
 
-    signal = whichsignal(n)
+    signal = whichsignal(m.properties[:n])
 
     test_positive = vote_shares(m.properties[:partyids],
-                                map(x-> closest_party_newWeight(x, positive_signalfn(x, signal.positive), parties), prties_spheres[p.id]))
+                                map(x-> closest_party_newWeight(x, positive_signalfn(x, signal.positive,m=m), parties), prties_spheres[p.id]))
 
     test_negative = vote_shares(m.properties[:partyids],
-                                map(x-> closest_party_newWeight(x, negative_signalfn(x, signal.negative), parties), prties_spheres[p.id]))
+                                map(x-> closest_party_newWeight(x, negative_signalfn(x, signal.negative,m=m), parties), prties_spheres[p.id]))
     return(positive = test_positive, negative = test_negative, signal = signal)
 end
 
-function send_signal(p, prties_spheres = prties_spheres, parties = parties)
+function send_signal(p, prties_spheres = prties_spheres, parties = parties, m=m)
 
 
-    status_quo_share = shares_psphere(p, prties_spheres, parties)[p.id]
+    status_quo_share = shares_psphere(p, prties_spheres, parties,m)[p.id]
 
-    counterfactuals = testsignals(p, prties_spheres, parties = parties);
+    counterfactuals = testsignals(p, prties_spheres, parties = parties,m=m);
         positive_counterfactual_share = counterfactuals.positive[p.id]
     negative_counterfactual_share = counterfactuals.negative[p.id]
     send_positive = positive_counterfactual_share > status_quo_share
@@ -277,9 +268,10 @@ end
 
 # ** Explorer
 
-function sampleposition_withinradius(p,r=m.properties[:r], k = k)
+function sampleposition_withinradius(p, m)
     x,y = p.pos
-
+    r = m.properties[:r]
+    k = m.properties[:k]
     function cropvalue(tentativevalue)
         if tentativevalue > last(k)
             tentativevalue = Float64(last(k))
@@ -301,21 +293,22 @@ end
 function test_newposition(p,
                           prties_spheres = prties_spheres,
                           parties= parties,
-                          voters = voters)
+                          voters = voters,
+                          m=m)
 
-    status_quo_share = shares_psphere(p, prties_spheres,parties)[p.id]
+    status_quo_share = shares_psphere(p, prties_spheres,parties,m)[p.id]
 #    println(status_quo_share))
 
     old_position = copy(p.id_pos)
 
-    new_position = sampleposition_withinradius(p)
+    new_position = sampleposition_withinradius(p,m)
 
     p.id_pos = new_position
 
     newpartieslist = DICT.Dictionary(m.properties[:partyids],
     map(i->m[i],m.properties[:partyids]))
 
-    newprties_spheres = getparties_spheres(newpartieslist, voters)
+    newprties_spheres = getparties_spheres(newpartieslist, voters,m)
 
     new_share = vote_shares(
         m.properties[:partyids],
@@ -334,27 +327,27 @@ function test_newposition(p,
         share += status_quo_share
         end
     return(position = ret, radius_share = share)
-
 end
 
+
 # ** Voter weight update
-function update_weight!(voter, party, prties_spheres = prties_spheres )
+function update_weight!(voter, party, prties_spheres = prties_spheres,m=m )
 
     similarity = 1-dist.cosine_dist(voter.id_pos, party.id_pos)
     mc = distri.Uniform(0,1)
     if rand(mc) < similarity && party.signal.shouldsend.positive
-        voter.weight = positive_signalfn(voter, party.signal.whichsignal.positive)
+        voter.weight = positive_signalfn(voter, party.signal.whichsignal.positive,m=m)
         end
 
     if rand(mc) < similarity && party.signal.shouldsend.negative
-        voter.weight = negative_signalfn(voter,party.signal.whichsignal.negative)
+        voter.weight = negative_signalfn(voter,party.signal.whichsignal.negative,m=m)
     end
 end
 
 # ** Opinion Dynamics
 
-function axelrod_update!(voter, model; n = n)
-
+function axelrod_update!(voter, model)
+    n = model.properties[:n]
     neighbor = abm.random_agent(model, x-> typeof(x) == Voter{n})
 
     voterpos,neighborpos = MVector{n}(voter.pos),MVector{n}(neighbor.pos)
@@ -382,29 +375,31 @@ end
 function signalstep!(m, parties, voters, prties_spheres)
 
     for p in parties
-        p.signal = send_signal(p, prties_spheres, parties)
+        p.signal = send_signal(p, prties_spheres, parties,m)
     end
 
     for v in voters
         for p in parties
-            update_weight!(v,p,prties_spheres)
+            update_weight!(v,p,prties_spheres,m)
         end
     end
 end
 
 
-function opinionstep!(m; voterid = 1:v)
-    for i in voterid
+function opinionstep!(m)
+
+    for i in m.properties[:voterids]
         axelrod_update!(m[i],m)
     end
-    for i in voterid
+
+    for i in m.properties[:voterids]
         setfield!(m[i], :pos , Tuple(m[i].id_pos))
     end
 end
 
-function pupdate_potential_pos!(p, parties, prties_spheres,voters)
+function pupdate_potential_pos!(p, parties, prties_spheres,voters,m)
 
-    position, radius_share = test_newposition(p, prties_spheres,  parties, voters)
+    position, radius_share = test_newposition(p, prties_spheres,  parties, voters,m)
 
     if radius_share > p.potential_pos.radius_share
         p.potential_pos = (position=position, radius_share = radius_share)
@@ -416,21 +411,22 @@ function allupdate_potential_pos!(m, parties,voters,
                                   prties_spheres)
     partyids = m.properties[:partyids]
     for p in partyids
-        pupdate_potential_pos!(m[p], parties, prties_spheres, voters)
+        pupdate_potential_pos!(m[p], parties, prties_spheres, voters,m)
     end
 end
 
-function campaign_cycle!(m; c = c)
+function campaign_cycle!(m)
+    c = m.properties[:c]
 
     parties = getparties(m)
-    voters = let vs = Vector{Voter}(undef,v)
-        for i in 1:v
+    voters = let vs = Vector{Voter}(undef,m.properties[:v])
+    for i in m.properties[:voterids]
             vs[i] = (@inbounds m[i])
         end
         vs
     end
 
-    prties_spheres = getparties_spheres(parties, voters);
+    prties_spheres = getparties_spheres(parties, voters,m);
 
     for _ in c
         signalstep!(m, parties, voters, prties_spheres)
@@ -454,3 +450,8 @@ function model_step!(m)
     campaign_cycle!(m)
     electoral_iteration!(m)
 end
+
+
+
+# My guess is that parties are seeing the OLD voters positions, rather than
+# their actual position!

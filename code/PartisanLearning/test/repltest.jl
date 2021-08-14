@@ -2,49 +2,30 @@ import Pkg
 Pkg.activate("../")
 
 using Revise
-
-using PartisanLearning
+import PartisanLearning as pl
 # * Visualization
 
-foo = ModelParams()
+fooparams = pl.ModelParams()
 
-foo |> typeof
-
-Parameters.@unpack foo
-
-param.v,
-param.p,
-param.n,
-param.k,
-param.s,
-param.c,
-param.r,
-param.voterids,
-param.partyids,
-
-v, p, n, k, s, c, r, voterids, partyids = Parameters.@unpack foo
-
-Dict((x->(fn=>getfield(x, fn) for fn ∈ fieldnames(typeof(x))))(foo))
-
-typeof(foo) |>fieldnames
-
-typedict(foo)
+m =  pl.model(fooparams)
 
 
-agent_colors(a) = typeof(a) == Voter{2} ? "#2b2b33" :  "#bf2642"
+pl.model_step!(m)
 
-agent_size(a) = typeof(a) == Voter{2} ? 5 :  20
+m.properties
 
+agent_colors(a) = typeof(a) == pl.Voter{2} ? "#2b2b33" :  "#bf2642"
+
+agent_size(a) = typeof(a) == pl.Voter{2} ? 5 :  20
 
 m = model()
-abm_play(
+pl.abm_play(
     m,
-    abm.dummystep,
-    model_step!,
+    pl.abm.dummystep,
+    pl.model_step!,
     ac = agent_colors,
     as = agent_size
 )
-
 
 
 parties = (collect(values(getparties(m))))
@@ -83,9 +64,6 @@ hist!(fig[1,2], map(x->x[2], foo))
 fig
 
 signalstepping(m)
-
-
-
 
 is, ss = collect(zip([(k,v) for (k,v) in pairs(shares)]...));
 is = [i for i in is];
