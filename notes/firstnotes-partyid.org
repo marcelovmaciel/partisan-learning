@@ -1,0 +1,36 @@
+#+TITLE: Firstnotes Partyid
+
+Notes related to the following email: [[file:emails.org::*August 20, 2021,][August 20, 2021,]]
+
+- Party support coalition
+- Aldrich model (cite:aldrich1983downsian) as paradigmatic: parties as aggregation of ideologically similar individuals, or parties  as long coalitions;
+- He wants to mix this notion of a party support coalition with one of party identification: voters crystallize a party id over a long time period and this will make them vote for politicians that are not necessarily the ideologically closest to them.
+
+#+begin_quote
+The basic idea is that party ID is a kind of "benefit of the doubt" so that a voter chooses the closest party only if the difference in distance between that party and the party where he has a party iD is larger than a certain amount
+#+end_quote
+
+- Ah, now I think I get it! The incumbency advantage lies in the fact that the voter will only change its behavior if d(closest_party, status_quo_party) > \(\kappa\). So, the party that is close to it might not be the one that they identify with. cite:kollman1998political might be a useful reference here!
+
+- What is the expected effect of this party id? that voters keep voting to the same party even though THE CANDIDATE is not as close to them
+- Finally, he mentions a sampling of candidates from the population:
+  #+begin_quote
+Here we can imagine, over a series of elections, candidates being drawn from the then ideological distribution of party supporters.
+  #+end_quote
+
+* Elaboration
+So, we actually only have one type of agent in this model: Voters. Parties do not actually exist! It is kinda like an emergent feature of people being similar, on which we attach a tag on top! So, agents have the following attributes:
+
+#+begin_src julia
+mutable struct Voter <: abm.AbstractAgent
+    id::Int
+    pos::NTuple{n,Float64}
+    amIaCandidate::Bool
+    myPartyId::Int
+end
+#=
+Note that if a voter is a candidate then its ~myPartyId~ should be the agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties throughout simulation inspection
+ =#
+#+end_src
+
+For the dynamics of the model I'll definitely need to take a look at cite:kollman1998political.

@@ -1,6 +1,17 @@
-# * The initial condition
+# * Issue Salience model
 
+module IssueSalience
+
+import Dictionaries as DICT
+import Agents as abm
+import Distributions as distri
+import Distances as dist
+import Base.@kwdef
+using StaticArrays
+
+# * The initial condition
 # ** Model Attributes
+
 
 @kwdef struct ModelParams
     v = 3000
@@ -449,9 +460,18 @@ end
 function model_step!(m)
     campaign_cycle!(m)
     electoral_iteration!(m)
-end
-
+ end
 
 
 # My guess is that parties are seeing the OLD voters positions, rather than
 # their actual position!
+#
+end
+
+
+# * Party id model
+
+module PartyId
+
+
+end

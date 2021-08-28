@@ -3,29 +3,35 @@ Pkg.activate("../")
 
 using Revise
 import PartisanLearning as pl
+
 # * Visualization
 
-fooparams = pl.ModelParams()
-
-m =  pl.model(fooparams)
+const is = pl.IssueSalience
 
 
-pl.model_step!(m)
+fooparams = is.IssueSalience.ModelParams()
+
+m =  is.model(fooparams)
+
+
+is.model_step!(m)
 
 m.properties
 
-agent_colors(a) = typeof(a) == pl.Voter{2} ? "#2b2b33" :  "#bf2642"
+agent_colors(a) = typeof(a) == is.Voter{2} ? "#2b2b33" :  "#bf2642"
 
-agent_size(a) = typeof(a) == pl.Voter{2} ? 5 :  20
+agent_size(a) = typeof(a) == is.Voter{2} ? 5 :  20
 
 m = model()
 pl.abm_play(
     m,
-    pl.abm.dummystep,
-    pl.model_step!,
+    is.abm.dummystep,
+    is.model_step!,
     ac = agent_colors,
     as = agent_size
 )
+
+# * Unorganized code
 
 
 parties = (collect(values(getparties(m))))
