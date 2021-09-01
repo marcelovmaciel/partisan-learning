@@ -3,12 +3,20 @@ Pkg.activate("../")
 
 using Revise
 import PartisanLearning as pl
-
-# * Visualization
-
 const is = pl.IssueSalience
+const pid = pl.PartyId
+using Agents
 
 
+let space = pid.abm.ContinuousSpace((1,))
+    nissues = 1
+    model = pid.abm.ABM(pid.Voter{nissues}, space)
+    pid.abm.add_agent!(pid.Voter(1,1),model)
+    pid.abm.allagents(model)
+end
+
+
+# * Issue Salience Model
 fooparams = is.IssueSalience.ModelParams()
 
 m =  is.model(fooparams)
@@ -30,6 +38,7 @@ pl.abm_play(
     ac = agent_colors,
     as = agent_size
 )
+# * PartyId model
 
 # * Unorganized code
 

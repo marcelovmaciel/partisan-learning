@@ -3,23 +3,54 @@
 Notes related to the following email: [[file:emails.org::*August 20, 2021,][August 20, 2021,]]
 
 - Party support coalition
-- Aldrich model (cite:aldrich1983downsian) as paradigmatic: parties as aggregation of ideologically similar individuals, or parties  as long coalitions;
-- He wants to mix this notion of a party support coalition with one of party identification: voters crystallize a party id over a long time period and this will make them vote for politicians that are not necessarily the ideologically closest to them.
+- Aldrich model (cite:aldrich1983downsian) as paradigmatic: parties as
+  aggregation of ideologically similar individuals, or parties as long
+  coalitions;
+- He wants to mix this notion of a party support coalition with one of party
+  identification: voters crystallize a party id over a long time period and this
+  will make them vote for politicians that are not necessarily the ideologically
+  closest to them.
 
 #+begin_quote
-The basic idea is that party ID is a kind of "benefit of the doubt" so that a voter chooses the closest party only if the difference in distance between that party and the party where he has a party iD is larger than a certain amount
+The basic idea is that party ID is a kind of "benefit of the doubt" so that a
+voter chooses the closest party only if the difference in distance between that
+party and the party where he has a party iD is larger than a certain amount
 #+end_quote
 
-- Ah, now I think I get it! The incumbency advantage lies in the fact that the voter will only change its behavior if d(closest_party, status_quo_party) > \(\kappa\). So, the party that is close to it might not be the one that they identify with. cite:kollman1998political might be a useful reference here!
+- Ah, now I think I get it! The incumbency advantage lies in the fact that the
+  voter will only change its behavior if d(closest_party, status_quo_party) >
+  \(\kappa\). So, the party that is close to it might not be the one that they
+  identify with. cite:kollman1998political might be a useful reference here!
 
-- What is the expected effect of this party id? that voters keep voting to the same party even though THE CANDIDATE is not as close to them
+- What is the expected effect of this party id? that voters keep voting to the
+  same party even though THE CANDIDATE is not as close to them
 - Finally, he mentions a sampling of candidates from the population:
-  #+begin_quote
-Here we can imagine, over a series of elections, candidates being drawn from the then ideological distribution of party supporters.
+
+    #+begin_quote
+Here we can imagine, over a series of elections, candidates being drawn from the
+then ideological distribution of party supporters.
   #+end_quote
 
+- This excerpt from his [[file:emails.org::*Sun, Aug 29][Sun, Aug 29]] email  is particularly relevant:
+
+  #+begin_quote
+(1) ) I hope that you can do a simple model for party ID  that instantiates the GWB model along the lines you have in what you sent me.  Exactly how many elections you need before you switch party  ID to match your voting choices is not clear, but also, I have posited a kind of  cascade effect that I need you to build in..  As long as lots of Democrats are voting Republican and don't switch party ID you can tell yourself that I just happen to be  Democrat who finds the recent crop of Republicans more attractive than the recent crop of Democrats.  But when most of my former Dem friends have switched their party iD to Republican it's harder for me to hang on to my Dem party iD because its too discrepant both from my voting behavior and from the partyy ID of my former Dem party ID acquaintancs or those that I read about.
+  #+end_quote
+
+- This maintains the notion that party id depends on previous choices, but it
+  must also be related to what its neighbors think. Because before he was
+  talking about the evolution of a single person, but now he is talking about
+  *Dem Friends*, that is, the agents' neighbors.
+- The easiest design I can think is to add some notion of neighbor assimilation akin to the OD majority model: One sees the radius of its neighbors and assimilates the neighbor's partyids, according to some probability.
+- So Party id crystallization is an effect of both my change of candidate AND of my neighbors' partyids.
+- Another design could be the following:
+  I calculate the median partyid from my neighbors. Then I assimilate it with some probability. The lower the probability the more I care about my own partyid choice vis-a-vis being consistent with my neighbors.
+
 * Elaboration
-So, we actually only have one type of agent in this model: Voters. Parties do not actually exist! It is kinda like an emergent feature of people being similar, on which we attach a tag on top! So, agents have the following attributes:
+So, we actually only have one type of agent in this model: Voters. Parties do
+not actually exist! It is kinda like an emergent feature of people being
+similar, on which we attach a tag on top! So, agents have the following
+attributes:
 
 #+begin_src julia
 mutable struct Voter <: abm.AbstractAgent
@@ -28,9 +59,44 @@ mutable struct Voter <: abm.AbstractAgent
     amIaCandidate::Bool
     myPartyId::Int
 end
-#=
-Note that if a voter is a candidate then its ~myPartyId~ should be the agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties throughout simulation inspection
- =#
+#= Note that if a voter is a candidate then its ~myPartyId~ should be the
+agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
+throughout simulation inspection =#
 #+end_src
 
-For the dynamics of the model I'll definitely need to take a look at cite:kollman1998political.
+For the dynamics of the model I'll definitely need to take a look at
+cite:kollman1998political. More specifically, this quote: [[file:~/Drive/Org/org-roam-mvm/kollman1998political.org::*On the behavior of parties][On the behavior of parties]].
+
+** Initial condition
+So, the initial logic is the following:
+- One initializes the voters;
+- Some \(\bf{c}\) number of voters will be treated as "candidates";
+- Each voter votes for the candidate who is closest to them. The one with the
+  most votes becomes the incumbent;
+- Each voter treats their candidate id as their initial partyid? This is a model initialization artifact.
+** Stepping
+
+- So, we know have an incumbent and all voters have a party-id. We sample once
+  again 𝐜 candidates, but the incumbent will obviously remain a candidate!
+- Let us define  a helper notion of PartyId_candidate: its the one which
+  is closest to the voter PartyId in this new electoral cycle. If the voter
+  voted for the incumbent party it will simply be the incumbent.
+- Now there is some constant \(\kappa\) which voters use to determine if they
+  will vote for the candidate that is closest to them or if they vote to the
+  candidate that is closest to their party id. If utility(closest_candidate) -
+  utility(PartyId_candidate) > \(\kappa\), then the voter will vote for the
+  closest_candidate, rather than the PartyId_candidate.
+- Once again, the candidate with most votes wins
+- But now, we also need to update the PartyIds. In cite:grofman2014rethinking it is argued that:
+  #+begin_quote
+  \($\mathrm{P}_{\mathrm{t}, \mathrm{t}+1}^{\mathrm{i}}=\mathrm{f}$ (strength of i's party identification at time $\mathrm{t}$; vote choice of i at time $\mathrm{t}, \mathrm{t}_{-1}$, etc.; proportion of voters with same party identification as i who voted for that party's candidate at time $t$ ).\)
+  #+end_quote
+  So, for an initial version of this model, we can say that the voter \(i\)'s new PartyId
+  in \(t+1\), after this iteration, could be the average of \(i\)'s PartyId
+  in \(t\) and the candidate they voted for in \(t\).
+  - A minor detail is that if a voter is a candidate in this electoral cycle,
+    then its partyid is updated to be the same as the voters' position;
+
+** Measures
+I can't think of measures for the model. Maybe how long a candidate remains
+winning? What proportion of voters voted for someone who was not their PartyId?

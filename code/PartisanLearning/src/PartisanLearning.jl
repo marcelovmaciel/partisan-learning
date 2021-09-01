@@ -1,7 +1,7 @@
 
 module PartisanLearning
 
-using AlgebraOfGraphics, GLMakie
+using GLMakie
 using Deldir
 using InteractiveDynamics
 

@@ -468,10 +468,41 @@ function model_step!(m)
 #
 end
 
-
 # * Party id model
 
 module PartyId
+# ** Initial condition
 
+import Agents as abm
+import Distributions as distri
+import Distances as dist
+import Base.@kwdef
+using StaticArrays
+import IterTools as iter
+
+mutable struct Voter{n} <: abm.AbstractAgent
+    id::Int
+    pos::NTuple{n,Float64}
+    amIaCandidate::Bool
+    myPartyId::NTuple{n,Float64}
+    #= Note that if a voter is a candidate then its ~myPartyId~ should be the
+agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
+throughout simulation inspection =#
+end
+
+function Voter(id::Int,nissues =  1,
+               pos = Tuple(rand(distri.Uniform(0,1),nissues)))
+    amIaCandidate = false
+    myPartyId = pos
+    return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
+end 
+
+function set_candidates!(c, m )
+    iter.repeatedly(abm.random_agent(m),c )
+end
+# ** Stepping
+#=
+
+=#
 
 end
