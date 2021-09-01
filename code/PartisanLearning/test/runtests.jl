@@ -10,7 +10,8 @@ const pid = pl.PartyId
     pos = Tuple(1.)
     myPartyId = pos
     return(pid.Voter{nissues}(1,pos,amIaCandidate, myPartyId))
-end
+ end
+
 @test v1 == pid.Voter(1,1,Tuple(1.))
 
 v2 = let space = pid.abm.ContinuousSpace((2.,))
@@ -41,8 +42,26 @@ getstructvalues(v4) == getstructvalues(v2)
 #= So, I do not generally want to use the add_agent! procedure, because i tend
 to control my agents' constructors =#
 
+one_agent_model() = let space = pid.abm.ContinuousSpace((2.,))
+    nissues = 1
+    model = pid.abm.ABM(pid.Voter{nissues}, space)
+    pid.abm.add_agent!(Tuple(1.), model,false, (1.,))
+    model
+end
 
+simpleTen_agents_model() = let space = pid.abm.ContinuousSpace((2.,))
+    nissues = 1
+    model = pid.abm.ABM(pid.Voter{nissues}, space)
+    for i in 1:10
+    vi = pid.Voter(i, nissues, Tuple(1.,))
+    pid.abm.add_agent_pos!(vi, model)
+        end
+    model
+end
 
-
-
-v2 == v3
+@test let m1 = simpleTen_agents_model(); ncandidates = 4
+    pid.set_candidates!(ncandidates,m1)
+    (pid.abm.allagents(m1) |>
+        collect |>
+        m-> sum(map(x->x.amIaCandidate, m))) == ncandidates
+end

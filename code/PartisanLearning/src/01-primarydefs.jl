@@ -478,13 +478,13 @@ import Distributions as distri
 import Distances as dist
 import Base.@kwdef
 using StaticArrays
-import IterTools as iter
+using StatsBase
 
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
     amIaCandidate::Bool
-    myPartyId::NTuple{n,Float64}
+    myPartyId::MVector{n,Float64}
     #= Note that if a voter is a candidate then its ~myPartyId~ should be the
 agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
 throughout simulation inspection =#
@@ -493,13 +493,20 @@ end
 function Voter(id::Int,nissues =  1,
                pos = Tuple(rand(distri.Uniform(0,1),nissues)))
     amIaCandidate = false
-    myPartyId = pos
+    myPartyId = MVector{nissues}(pos)
     return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
 end 
 
-function set_candidates!(c, m )
-    iter.repeatedly(abm.random_agent(m),c )
+
+function set_candidates!(ncandidates,model)
+    ids = collect(abm.allids(model))
+    candidates = sample(ids,ncandidates, replace = false)
+    for candidate in candidates
+        model[candidate].amIaCandidate = true
+        end
 end
+
+
 # ** Stepping
 #=
 
