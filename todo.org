@@ -1,5 +1,5 @@
 #+TITLE: Todo
-* TODO [#A] Read the following papers
+* DONE [#A] Read the following papers
 - [X] cite:falmagne2019stochastic
   #+begin_src latex
 @incollection{falmagne2019stochastic,
@@ -58,6 +58,7 @@ Discuss the following points:
 SCHEDULED: <2021-08-06 sex>
 - Fix the pos stuff
 - Fix
+
 
 * TODO Anything radius related should use nearby_ids proc
 

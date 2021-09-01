@@ -490,13 +490,13 @@ agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
 throughout simulation inspection =#
 end
 
+
 function Voter(id::Int,nissues =  1,
                pos = Tuple(rand(distri.Uniform(0,1),nissues)))
     amIaCandidate = false
     myPartyId = MVector{nissues}(pos)
     return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
 end 
-
 
 function set_candidates!(ncandidates,model)
     ids = collect(abm.allids(model))
@@ -506,6 +506,27 @@ function set_candidates!(ncandidates,model)
         end
 end
 
+
+function get_closest_candidate(agentid,model)
+    dummypos = 10.; dummyid = -2
+    for i in
+        abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
+        if !model[i].amIaCandidate
+            continue
+        else
+            if abm.edistance(agentid, i, model) < dummypos
+                dummypos = abm.edistance(agentid, i, model)
+                dummyid = i
+            end
+        end
+    end
+    return(dummyid)
+end
+
+
+
+# TODO implement who votes for whom and who is the incumbent!
+# this should be a model property.
 
 # ** Stepping
 #=
