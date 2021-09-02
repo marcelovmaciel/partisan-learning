@@ -73,14 +73,15 @@ end
 
 
 
-agents_model(nagents) = let space = pid.abm.ContinuousSpace((2.,))
-    nissues = 1
-    model = pid.abm.ABM(pid.Voter{nissues}, space)
+function agents_model(nagents, nissues)
+    space = abm.ContinuousSpace((1.,))
+    properties = Dict(:current_incumbent => 0)
+    model = abm.ABM(Voter{nissues}, space, properties = properties)
     for i in 1:nagents
-    vi = pid.Voter(i, nissues)
-    pid.abm.add_agent_pos!(vi, model)
-        end
-    model
+    vi = Voter(i, nissues)
+    abm.add_agent_pos!(vi, model)
+    end
+    return(model)
 end
 
 
@@ -119,7 +120,7 @@ end
 
 # TODO: report there is something very wrong with the edistance proc in Agents.jl
 
-for i in 1:100
+#= for i in 1:100
 let model = agents_model(1000)
     pid.set_candidates!(3,model)
     closest_candidates = Array{Int}(undef, pid.abm.nagents(model))
@@ -145,10 +146,28 @@ let model = agents_model(1000)
 =#
 end
 end
+=#
 
-
-let model = agents_model(1000)
-    pid.set_candidates!(3,model)
-    pid.getmostvoted(model) |> println
+let model = agents_model(10000)
+    @time pid.set_candidates!(3,model)
+    @time pid.getmostvoted(model)
 
     end
+
+
+let model = agents_model(10000)
+    @code_warntype pid.set_candidates!(3,model)
+    @code_warntype pid.getmostvoted(model)
+
+    end
+
+# here is the last initilization step!
+let model = agents_model(10000)
+    pid.set_candidates!(3,model)
+    new_incumbent = pid.getmostvoted(model)
+    model.properties[:incumbent]= new_incumbent
+    println(model.properties)
+end
+
+m1 = pid.initialize_model(1000, 3,2 )
+@test m1.properties[:incumbent] == pid.getmostvoted(m1)

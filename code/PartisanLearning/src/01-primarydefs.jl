@@ -490,9 +490,10 @@ agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
 throughout simulation inspection =#
 end
 
+const bounds = (0,1)
 
 function Voter(id::Int,nissues =  1,
-               pos = Tuple(rand(distri.Uniform(0,1),nissues)))
+               pos = Tuple(rand(distri.Uniform(bounds...),nissues)))
     amIaCandidate = false
     myPartyId = MVector{nissues}(pos)
     return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
@@ -505,6 +506,7 @@ function set_candidates!(ncandidates,model)
         model[candidate].amIaCandidate = true
         end
 end
+
 
 
 # function get_closest_candidate(agentid,model)
@@ -547,8 +549,20 @@ function getmostvoted(model)
    return(argmax(proportionmap(closest_candidates))) # argmax will return only one maximal, beware of that!
 end
 
-# TODO implement who votes for whom and who is the incumbent!
-# this should be a model property.
+function initialize_model(nagents, nissues, ncandidates)
+    space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
+    properties = Dict(:incumbent => 0)
+    model = abm.ABM(Voter{nissues}, space, properties = properties)
+    for i in 1:nagents
+        vi = Voter(i, nissues)
+        abm.add_agent_pos!(vi, model)
+    end
+    set_candidates!(ncandidates,model)
+    new_incumbent = getmostvoted(model)
+    model.properties[:incumbent]= new_incumbent
+    return(model)
+end
+
 
 # ** Stepping
 #=
