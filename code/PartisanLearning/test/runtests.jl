@@ -72,6 +72,7 @@ end
 end
 
 
+
 agents_model(nagents) = let space = pid.abm.ContinuousSpace((2.,))
     nissues = 1
     model = pid.abm.ABM(pid.Voter{nissues}, space)
@@ -83,27 +84,17 @@ agents_model(nagents) = let space = pid.abm.ContinuousSpace((2.,))
 end
 
 
-@testset "Am I getting the closest candidate as designed? Or is there a bug" begin
-    @test let model = agents_model(10)
-        testid = 4
-        pid.set_candidates!(2,model)
-        setfield!(model[testid], :pos, (0.5,))
-        for i in (pid.abm.allagents(model) |> collect) println(i) end
-        dummypos = 10.; dummyid = -2
-        for i in
-            pid.abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
-            if !model[i].amIaCandidate
-                continue
-            else
-                if pid.abm.edistance(testid, i, model) < dummypos
-                    dummypos = pid.abm.edistance(testid, i, model)
-                    dummyid = i
-                end
-            end
-        end
-        dummyid == pid.get_closest_candidate(testid, model)
-    end
-end
+let m1 = agents_model(100); ncandidates = 4
+      pid.set_candidates!(ncandidates,m1)
+      (pid.abm.allagents(m1) |>
+          collect |>
+          m-> sum(map(x->x.amIaCandidate, m))) == ncandidates
+  end
+
+
+#= TODO: - Check if the id is actually a candidate, and Check if the candidate is actually the closest one
+=#
+
 # let model = agents_model(10)
 #     testid = 4
 #     pid.set_candidates!(2,model)
@@ -113,8 +104,51 @@ end
 # end
 
 
+# TODO: test if I am indeed choosing the most voted!
 
-#= TODO:
-- Check if the id is actually a candidate
-- Check if the candidate is actually the closest one
+let model = agents_model(10)
+    pid.set_candidates!(3,model)
+    closest_candidates = Array{Int}(undef, pid.abm.nagents(model))
+    for (fooindex,id) in enumerate(pid.abm.allids(model))
+        closest_candidates[fooindex] = pid.get_closest_candidate(id,model)
+    end
+   pid.argmax(pid.proportionmap(closest_candidates)) == pid.getmostvoted(model)
+end
+
+
+
+# TODO: report there is something very wrong with the edistance proc in Agents.jl
+
+for i in 1:100
+let model = agents_model(1000)
+    pid.set_candidates!(3,model)
+    closest_candidates = Array{Int}(undef, pid.abm.nagents(model))
+    somecandidate = pid.get_closest_candidate(1, model)
+    model[somecandidate].pos = (0.5,)
+
+    for (fooindex,id) in enumerate(pid.abm.allids(model))
+        closest_candidates[fooindex] = pid.get_closest_candidate(id,model)
+    end
+   #println(model[somecandidate])
+   #println(pid.proportionmap(closest_candidates))
+    if pid.getmostvoted(model) != somecandidate
+
+        println(model[pid.getmostvoted(model)], model[somecandidate])
+        println(pid.proportionmap(closest_candidates))
+        println(" ")
+        #for i in collect(pid.abm.allagents(model)) println(i) end
+    end
+    #=So, this shows that it is not always true that the center will win
+    #in this simulation because voters might be unevenly distributed!
+    # TODO: Check if I am indeed picking the one that is closest to most agents
+    #
 =#
+end
+end
+
+
+let model = agents_model(1000)
+    pid.set_candidates!(3,model)
+    pid.getmostvoted(model) |> println
+
+    end

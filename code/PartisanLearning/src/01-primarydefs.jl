@@ -507,15 +507,30 @@ function set_candidates!(ncandidates,model)
 end
 
 
+# function get_closest_candidate(agentid,model)
+#     dummypos = 10.; dummyid = -2
+#     for i in
+#         abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
+#         if !model[i].amIaCandidate
+#             continue
+#         else
+#             if abm.edistance(agentid, i, model) < dummypos
+#                 dummypos = abm.edistance(agentid, i, model)
+#                 dummyid = i
+#             end
+#         end
+#     end
+#     return(dummyid)
+# end
+
 function get_closest_candidate(agentid,model)
-    dummypos = 10.; dummyid = -2
-    for i in
-        abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
-        if !model[i].amIaCandidate
-            continue
-        else
-            if abm.edistance(agentid, i, model) < dummypos
-                dummypos = abm.edistance(agentid, i, model)
+    dummypos = 100.
+    dummyid = -2
+    for i in abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
+        if model[i].amIaCandidate
+            distance = dist.euclidean(model[agentid].pos, model[i].pos)
+            if distance < dummypos
+                dummypos = distance
                 dummyid = i
             end
         end
@@ -524,6 +539,13 @@ function get_closest_candidate(agentid,model)
 end
 
 
+function getmostvoted(model)
+    closest_candidates = Array{Int}(undef, abm.nagents(model))
+    for (fooindex,id) in enumerate(abm.allids(model))
+        closest_candidates[fooindex] = get_closest_candidate(id,model)
+    end
+   return(argmax(proportionmap(closest_candidates))) # argmax will return only one maximal, beware of that!
+end
 
 # TODO implement who votes for whom and who is the incumbent!
 # this should be a model property.
