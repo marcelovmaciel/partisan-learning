@@ -154,20 +154,37 @@ let model = agents_model(10000)
 
     end
 
-
 let model = agents_model(10000)
     @code_warntype pid.set_candidates!(3,model)
     @code_warntype pid.getmostvoted(model)
 
     end
 
-# here is the last initilization step!
-let model = agents_model(10000)
-    pid.set_candidates!(3,model)
-    new_incumbent = pid.getmostvoted(model)
-    model.properties[:incumbent]= new_incumbent
-    println(model.properties)
+
+@test let m1 = pid.initialize_model(1000, 3,2)
+    m1.properties[:incumbent] == pid.getmostvoted(m1)
 end
 
-m1 = pid.initialize_model(1000, 3,2 )
-@test m1.properties[:incumbent] == pid.getmostvoted(m1)
+
+# TODO: ask on zulip how to check that without allocating
+# @time reduce((x,y)-> x + y.amIaCandidate, pid.abm.allagents(m1), init = 0)
+
+@testset "Check if reset_candidates keeps the incumbent as candidate" begin
+    ncandidates = 3
+    nissues = 1
+    @test let m = pid.initialize_model(100,
+                                       nissues,ncandidates)
+        pid.reset_candidates!(m)
+        reduce((x,y)-> x + y.amIaCandidate,
+               pid.abm.allagents(m), init = 0) == 1
+    end
+    @test let m = pid.initialize_model(100,
+                                       nissues,ncandidates)
+        pid.reset_candidates!(m)
+        pid.set_candidates!(ncandidates-1, m)
+        reduce((x,y)-> x + y.amIaCandidate,
+               pid.abm.allagents(m), init = 0) == 3
+    end
+end
+
+# TODO check if candidates_iteration_setup! keeps the incumbent and add ncandidates - 1 other candidates

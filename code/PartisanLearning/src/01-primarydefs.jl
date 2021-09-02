@@ -472,6 +472,15 @@ end
 
 module PartyId
 # ** Initial condition
+#=
+the initial logic is the following:
+• One initializes the voters;
+• Some c number of voters will be treated as “candidates”;
+• Each voter votes for the candidate who is closest to them. The one
+with the most votes becomes the incumbent;
+• Maybe each voter treats their candidate id as their initial partyid?
+This is a model initialization artifact
+=#
 
 import Agents as abm
 import Distributions as distri
@@ -492,6 +501,13 @@ end
 
 const bounds = (0,1)
 
+@kwdef struct ModelParams
+    nagents = 3000
+    ncandidates = 10
+    nissues = 1
+    bounds = bounds
+end
+
 function Voter(id::Int,nissues =  1,
                pos = Tuple(rand(distri.Uniform(bounds...),nissues)))
     amIaCandidate = false
@@ -506,24 +522,6 @@ function set_candidates!(ncandidates,model)
         model[candidate].amIaCandidate = true
         end
 end
-
-
-
-# function get_closest_candidate(agentid,model)
-#     dummypos = 10.; dummyid = -2
-#     for i in
-#         abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
-#         if !model[i].amIaCandidate
-#             continue
-#         else
-#             if abm.edistance(agentid, i, model) < dummypos
-#                 dummypos = abm.edistance(agentid, i, model)
-#                 dummyid = i
-#             end
-#         end
-#     end
-#     return(dummyid)
-# end
 
 function get_closest_candidate(agentid,model)
     dummypos = 100.
@@ -540,7 +538,6 @@ function get_closest_candidate(agentid,model)
     return(dummyid)
 end
 
-
 function getmostvoted(model)
     closest_candidates = Array{Int}(undef, abm.nagents(model))
     for (fooindex,id) in enumerate(abm.allids(model))
@@ -550,23 +547,45 @@ function getmostvoted(model)
 end
 
 function initialize_model(nagents, nissues, ncandidates)
+
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
-    properties = Dict(:incumbent => 0)
+    properties = Dict(:incumbent => 0,
+                      :params => ModelParams(nagents = nagents,
+                                             nissues = nissues,
+                                             ncandidates = ncandidates))
     model = abm.ABM(Voter{nissues}, space, properties = properties)
+
     for i in 1:nagents
         vi = Voter(i, nissues)
         abm.add_agent_pos!(vi, model)
     end
+
     set_candidates!(ncandidates,model)
     new_incumbent = getmostvoted(model)
+
+    for i in abm.allids(model)
+        model[i].PartyId = get_closest_candidate(model[i], model)
+    end
+
     model.properties[:incumbent]= new_incumbent
     return(model)
 end
-
 
 # ** Stepping
 #=
 
 =#
+
+function reset_candidates!(model)
+    for agent in abm.allids(model)
+        model[agent].amIaCandidate = false
+    end
+    model[model.properties[:incumbent]].amIaCandidate = true
+end
+
+function candidates_iteration_setup!(m)
+    reset_candidates!(m)
+    set_candidates!(m.properties[:params].ncandidates-1, m)
+end
 
 end
