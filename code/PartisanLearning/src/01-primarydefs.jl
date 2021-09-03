@@ -545,8 +545,8 @@ end
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM)
     closest_candidates = Array{Int}(undef, abm.nagents(model))
-    for (fooindex,id) in enumerate(abm.allids(model))
-        closest_candidates[fooindex] = get_closest_candidate(id,model)
+    for id in abm.allids(model)
+        closest_candidates[id] = get_closest_candidate(id,model)
     end
    return(argmax(proportionmap(closest_candidates))) # argmax will return only one maximal, beware of that!
 end
@@ -602,6 +602,7 @@ end
 
 function update_partyid!(agentid,model)
     closest_candidate = get_closest_candidate(agentid,model)
+
 end
 
 
