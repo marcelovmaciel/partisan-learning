@@ -187,4 +187,10 @@ end
     end
 end
 
+
+ncandidates = 3
+nissues = 1
+m = pid.initialize_model(10,nissues, ncandidates)
+pid.candidates_iteration_setup!(m)
+
 # TODO check if candidates_iteration_setup! keeps the incumbent and add ncandidates - 1 other candidates

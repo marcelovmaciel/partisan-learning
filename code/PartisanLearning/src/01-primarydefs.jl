@@ -506,6 +506,7 @@ const bounds = (0,1)
     ncandidates = 10
     nissues = 1
     bounds = bounds
+    κ = 0.1
 end
 
 function Voter(id::Int,nissues =  1,
@@ -515,7 +516,9 @@ function Voter(id::Int,nissues =  1,
     return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
 end 
 
-function set_candidates!(ncandidates,model)
+
+"set_candidates!(ncandidates,model)"
+function set_candidates!(ncandidates::Int,model::abm.ABM)
     ids = collect(abm.allids(model))
     candidates = sample(ids,ncandidates, replace = false)
     for candidate in candidates
@@ -523,7 +526,8 @@ function set_candidates!(ncandidates,model)
         end
 end
 
-function get_closest_candidate(agentid,model)
+"get_closest_candidate(agentid::Int, model::abm.ABM)"
+function get_closest_candidate(agentid::Int,model)
     dummypos = 100.
     dummyid = -2
     for i in abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
@@ -538,7 +542,8 @@ function get_closest_candidate(agentid,model)
     return(dummyid)
 end
 
-function getmostvoted(model)
+"getmostvoted(model::abm.ABM)"
+function getmostvoted(model::abm.ABM)
     closest_candidates = Array{Int}(undef, abm.nagents(model))
     for (fooindex,id) in enumerate(abm.allids(model))
         closest_candidates[fooindex] = get_closest_candidate(id,model)
@@ -546,7 +551,8 @@ function getmostvoted(model)
    return(argmax(proportionmap(closest_candidates))) # argmax will return only one maximal, beware of that!
 end
 
-function initialize_model(nagents, nissues, ncandidates)
+"initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
+function initialize_model(nagents::Int, nissues::Int, ncandidates::Int)
 
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
     properties = Dict(:incumbent => 0,
@@ -564,10 +570,15 @@ function initialize_model(nagents, nissues, ncandidates)
     new_incumbent = getmostvoted(model)
 
     for i in abm.allids(model)
-        model[i].PartyId = get_closest_candidate(model[i], model)
+        closest_candidate_pos = let
+            closest_candidate_id = get_closest_candidate(i,model)
+            model[closest_candidate_id].pos
+            end
+        model[i].myPartyId = closest_candidate_pos
     end
 
     model.properties[:incumbent]= new_incumbent
+
     return(model)
 end
 
@@ -575,17 +586,23 @@ end
 #=
 
 =#
-
-function reset_candidates!(model)
+"reset_candidates!(model::abm.ABM)"
+function reset_candidates!(model::abm.ABM)
     for agent in abm.allids(model)
         model[agent].amIaCandidate = false
     end
     model[model.properties[:incumbent]].amIaCandidate = true
 end
 
-function candidates_iteration_setup!(m)
+"candidates_iteration_setup!(model::abm.ABM)"
+function candidates_iteration_setup!(m::abm.ABM)
     reset_candidates!(m)
     set_candidates!(m.properties[:params].ncandidates-1, m)
 end
 
+function update_partyid!(agentid,model)
+    closest_candidate = get_closest_candidate(agentid,model)
 end
+
+
+end  # this is where the module ends!!!
