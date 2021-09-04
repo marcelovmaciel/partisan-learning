@@ -189,13 +189,68 @@ end
 
 ncandidates = 3
 nissues = 1
-m = pid.initialize_model(10,nissues, ncandidates)
+m = pid.initialize_model(100,nissues, ncandidates)
 pid.candidates_iteration_setup!(m)
-
 # TODO check if candidates_iteration_setup! keeps the incumbent and add ncandidates - 1 other candidates
 
 
 
-sort(pid.abm.allids(m)|>collect)
+@testset "test if the candidate closest to agents differs from candidate closest to their partyid" begin
+    @test let ncandidates = 10
+        nissues = 1
+        m = pid.initialize_model(1000,nissues, ncandidates)
+        pid.candidates_iteration_setup!(m)
+        any([begin
+                 closest_to_me = pid.get_closest_candidate(agentid,m)
+                 closest_to_myPartyId = pid.get_closest_candidate(agentid,
+                                                                  m,
+                                                                  :myPartyId)
+            closest_to_me != closest_to_myPartyId
+             end
+             for agentid in pid.abm.allids(m)])
+   end
+end
 
-pid.getmostvoted(m)
+
+@testset "test if the candidate an agent will vote for differs from candidate closest to their partyid" begin
+    function  get_whoAgentVotesfor(agentid, model)
+        κ = model.properties[:params].κ
+
+        closest_to_me = get_closest_candidate(agentid,model)
+        closest_to_myPartyId = get_closest_candidate(agentid, model, :myPartyId)
+        whoillvotefor = closest_to_myPartyId
+        two_candidates_distance = dist.euclidean(model[closest_to_me].pos,
+                                                 model[closest_to_myPartyId].pos)
+        if two_candidates_distance > κ
+            whoillvotefor = closest_to_me
+        end
+        whoillvotefor != closest_to_myPartyId
+    end
+    @test let ncandidates = 10
+        nissues = 1
+        m = pid.initialize_model(1000,nissues, ncandidates, 0.1)
+        pid.candidates_iteration_setup!(m)
+        any([pid.get_whoAgentVotesfor(agentid,m)
+             for agentid in pid.abm.allids(m)])
+    end
+        @test let ncandidates = 2
+            nissues = 1
+            κ = 0.0001
+            m = pid.initialize_model(1000,nissues, ncandidates, κ)
+            pid.candidates_iteration_setup!(m)
+            any([pid.get_whoAgentVotesfor(agentid,m)
+                 for agentid in pid.abm.allids(m)])
+    end
+end
+
+
+# TODO: Write that as code!: IT MIGHT HAPPEN that people are very far from their partyid candidate!.
+
+let ncandidates = 3
+            nissues = 1
+            κ = 0.5
+            m = pid.initialize_model(1000,nissues, ncandidates, κ)
+            pid.candidates_iteration_setup!(m)
+            any([pid.get_whoAgentVotesfor(agentid,m)
+                 for agentid in pid.abm.allids(m)])
+end

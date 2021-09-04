@@ -473,15 +473,13 @@ end
 
 module PartyId
 # ** Initial condition
-#=
-the initial logic is the following:
+#= the initial logic is the following:
 • One initializes the voters;
 • Some c number of voters will be treated as “candidates”;
 • Each voter votes for the candidate who is closest to them. The one
 with the most votes becomes the incumbent;
 • Maybe each voter treats their candidate id as their initial partyid?
-This is a model initialization artifact
-=#
+This is a model initialization artifact=#
 
 import Agents as abm
 import Distributions as distri
@@ -527,14 +525,26 @@ function set_candidates!(ncandidates::Int,model::abm.ABM)
         end
 end
 
-# TODO: add comment about dummy values
 "get_closest_candidate(agentid::Int, model::abm.ABM)"
-function get_closest_candidate(agentid::Int,model)
+function get_closest_candidate(agentid::Int,model, mypos_or_partypos = :pos)
+    #=
+    In this function the optional argument must the field of position that the function must calculate! Either the agents' position or its partyid position!
+    =#
+    #=
+    Those are dummy variables. In the first loop iteration
+    they are replaced. Since the bounds: (0,1) there is no
+    way distance > dummydistance! the id is negative because
+    there can be no such thing. Thus, it will warn me downstream
+    if any mistake has happened here.
+    =#
     dummydistance = 100.
     dummyid = -2
     for i in abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
         if model[i].amIaCandidate
-            distance = dist.euclidean(model[agentid].pos, model[i].pos)
+            agentposfield = getfield(model[agentid],
+                                     mypos_or_partypos)
+            distance = dist.euclidean(agentposfield,
+                                      model[i].pos)
             if distance < dummydistance
                 dummydistance = distance
                 dummyid = i
@@ -544,9 +554,11 @@ function get_closest_candidate(agentid::Int,model)
     return(dummyid)
 end
 
-# TODO: add comment about assumption
+
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM)
+    #=The candidate who is closest to most wins.
+    Standard downsian assumption.=#
     closest_candidates = Array{Int}(undef, abm.nagents(model))
     for id in abm.allids(model)
         closest_candidates[id] = get_closest_candidate(id,model)
@@ -555,13 +567,15 @@ function getmostvoted(model::abm.ABM)
 end
 
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
-function initialize_model(nagents::Int, nissues::Int, ncandidates::Int)
+function initialize_model(nagents::Int, nissues::Int, ncandidates::Int,
+                          κ = 0.1)
 
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
     properties = Dict(:incumbent => 0,
                       :params => ModelParams(nagents = nagents,
                                              nissues = nissues,
-                                             ncandidates = ncandidates))
+                                             ncandidates = ncandidates,
+                                             κ = κ))
     model = abm.ABM(Voter{nissues}, space, properties = properties)
 
     for i in 1:nagents
@@ -604,6 +618,24 @@ function candidates_iteration_setup!(m::abm.ABM)
 end
 
 
+
+function get_whoAgentVotesfor(agentid, model)
+    κ = model.properties[:params].κ
+    closest_to_me = get_closest_candidate(agentid,model)
+    closest_to_myPartyId = get_closest_candidate(agentid,
+                                                 model,
+                                                 :myPartyId)
+    whoillvotefor = closest_to_myPartyId
+    two_candidates_distance = dist.euclidean(model[closest_to_me].pos,
+                                             model[closest_to_myPartyId].pos)
+
+    if two_candidates_distance > κ
+        whoillvotefor = closest_to_me
+    end
+    whoillvotefor != closest_to_myPartyId
+end
+
+
 function update_partyid!(agentid,model)
     κ = model.properties[:params].κ
     closest_candidate = get_closest_candidate(agentid,model)
@@ -621,6 +653,6 @@ candidatos se o candidato mais proximo dele 'e tipo muito mais proximo que o
 candidato do partido, uma contante kappa, ele vota no outro maas, ao faze-lo sua
 partyid passa a ser a media da posicao desse novo candidato com a partyid
 anterior
-#=#
+=#
 
 end  # this is where the module ends!!!
