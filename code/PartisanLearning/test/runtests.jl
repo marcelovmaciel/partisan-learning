@@ -230,7 +230,7 @@ end
         nissues = 1
         m = pid.initialize_model(1000,nissues, ncandidates, 0.1)
         pid.candidates_iteration_setup!(m)
-        any([pid.get_whoAgentVotesfor(agentid,m)
+        any([get_whoAgentVotesfor(agentid,m)
              for agentid in pid.abm.allids(m)])
     end
         @test let ncandidates = 2
@@ -238,7 +238,7 @@ end
             κ = 0.0001
             m = pid.initialize_model(1000,nissues, ncandidates, κ)
             pid.candidates_iteration_setup!(m)
-            any([pid.get_whoAgentVotesfor(agentid,m)
+            any([get_whoAgentVotesfor(agentid,m)
                  for agentid in pid.abm.allids(m)])
     end
 end
@@ -253,4 +253,18 @@ let ncandidates = 3
             pid.candidates_iteration_setup!(m)
             any([pid.get_whoAgentVotesfor(agentid,m)
                  for agentid in pid.abm.allids(m)])
+end
+
+
+
+# this shows that this procedure might have a huge impact !
+let ncandidates = 3
+    nissues = 1
+    κ = 0.1
+    m = pid.initialize_model(1000,nissues, ncandidates, κ)
+    pid.candidates_iteration_setup!(m)
+    println(m[1].myPartyId)
+    pid.update_partyid!(1,m)
+    println(m[1].myPartyId)
+
 end

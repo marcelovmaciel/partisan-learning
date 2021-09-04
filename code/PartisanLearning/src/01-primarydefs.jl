@@ -525,7 +525,7 @@ function set_candidates!(ncandidates::Int,model::abm.ABM)
         end
 end
 
-"get_closest_candidate(agentid::Int, model::abm.ABM)"
+"get_closest_candidate(agentid::Int, model::abm.ABM, mypos_or_partypos::Symbol)"
 function get_closest_candidate(agentid::Int,model, mypos_or_partypos = :pos)
     #=
     In this function the optional argument must the field of position that the function must calculate! Either the agents' position or its partyid position!
@@ -553,7 +553,6 @@ function get_closest_candidate(agentid::Int,model, mypos_or_partypos = :pos)
     end
     return(dummyid)
 end
-
 
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM)
@@ -601,7 +600,14 @@ end
 
 # ** Stepping
 #=
-
+there is some sublety here.
+#basicamente na iteracao vai ter dois tipos de calculo de distancia pra cada
+agente ele quer saber quem ele ta mais proximo em termos de posicao DELE MAS
+tambem quem que ta mais proximo da partyid dele entao ele considera dois
+candidatos se o candidato mais proximo dele 'e tipo muito mais proximo que o
+candidato do partido, uma contante kappa, ele vota no outro maas, ao faze-lo sua
+partyid passa a ser a media da posicao desse novo candidato com a partyid
+anterior
 =#
 "reset_candidates!(model::abm.ABM)"
 function reset_candidates!(model::abm.ABM)
@@ -617,8 +623,7 @@ function candidates_iteration_setup!(m::abm.ABM)
     set_candidates!(m.properties[:params].ncandidates-1, m)
 end
 
-
-
+"get_whoAgentVotesfor(agentid, model)"
 function get_whoAgentVotesfor(agentid, model)
     κ = model.properties[:params].κ
     closest_to_me = get_closest_candidate(agentid,model)
@@ -632,27 +637,23 @@ function get_whoAgentVotesfor(agentid, model)
     if two_candidates_distance > κ
         whoillvotefor = closest_to_me
     end
-    whoillvotefor != closest_to_myPartyId
-end
 
+    return(whoillvotefor)
+
+end
 
 function update_partyid!(agentid,model)
-    κ = model.properties[:params].κ
-    closest_candidate = get_closest_candidate(agentid,model)
+    whoIllVote_now = get_whoAgentVotesfor(agentid, model)
 
-    if dist.euclidean(model[agentid].pos, model[i].pos) > κ
-
-    end
+    model[agentid].myPartyId = map((x,y) -> mean([x,y]),
+                                   model[agentid].myPartyId,
+                                   model[whoIllVote_now].pos)
 end
 
-#= there is some sublety here.
-#basicamente na iteracao vai ter dois tipos de calculo de distancia pra cada
-agente ele quer saber quem ele ta mais proximo em termos de posicao DELE MAS
-tambem quem que ta mais proximo da partyid dele entao ele considera dois
-candidatos se o candidato mais proximo dele 'e tipo muito mais proximo que o
-candidato do partido, uma contante kappa, ele vota no outro maas, ao faze-lo sua
-partyid passa a ser a media da posicao desse novo candidato com a partyid
-anterior
-=#
+# TODO: implement this guy
+function updatePid_neighbors_influence!(agentid,model, ρ, ϕ)
+
+
+end
 
 end  # this is where the module ends!!!
