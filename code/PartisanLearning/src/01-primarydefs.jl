@@ -468,6 +468,7 @@ function model_step!(m)
 #
 end
 
+
 # * Party id model
 
 module PartyId
@@ -526,15 +527,16 @@ function set_candidates!(ncandidates::Int,model::abm.ABM)
         end
 end
 
+# TODO: add comment about dummy values
 "get_closest_candidate(agentid::Int, model::abm.ABM)"
 function get_closest_candidate(agentid::Int,model)
-    dummypos = 100.
+    dummydistance = 100.
     dummyid = -2
     for i in abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
         if model[i].amIaCandidate
             distance = dist.euclidean(model[agentid].pos, model[i].pos)
-            if distance < dummypos
-                dummypos = distance
+            if distance < dummydistance
+                dummydistance = distance
                 dummyid = i
             end
         end
@@ -542,6 +544,7 @@ function get_closest_candidate(agentid::Int,model)
     return(dummyid)
 end
 
+# TODO: add comment about assumption
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM)
     closest_candidates = Array{Int}(undef, abm.nagents(model))
@@ -600,10 +603,24 @@ function candidates_iteration_setup!(m::abm.ABM)
     set_candidates!(m.properties[:params].ncandidates-1, m)
 end
 
+
 function update_partyid!(agentid,model)
+    κ = model.properties[:params].κ
     closest_candidate = get_closest_candidate(agentid,model)
 
+    if dist.euclidean(model[agentid].pos, model[i].pos) > κ
+
+    end
 end
 
+#= there is some sublety here.
+#basicamente na iteracao vai ter dois tipos de calculo de distancia pra cada
+agente ele quer saber quem ele ta mais proximo em termos de posicao DELE MAS
+tambem quem que ta mais proximo da partyid dele entao ele considera dois
+candidatos se o candidato mais proximo dele 'e tipo muito mais proximo que o
+candidato do partido, uma contante kappa, ele vota no outro maas, ao faze-lo sua
+partyid passa a ser a media da posicao desse novo candidato com a partyid
+anterior
+#=#
 
 end  # this is where the module ends!!!
