@@ -642,18 +642,32 @@ function get_whoAgentVotesfor(agentid, model)
 
 end
 
-function update_partyid!(agentid,model)
-    whoIllVote_now = get_whoAgentVotesfor(agentid, model)
 
-    model[agentid].myPartyId = map((x,y) -> mean([x,y]),
-                                   model[agentid].myPartyId,
-                                   model[whoIllVote_now].pos)
+
+
+function update_partyid!(agentid,model)
+    # let modelsize = 1000
+    whoIllVote_now = get_whoAgentVotesfor(agentid, model) #this guy allocates  17 times!
+    model[agentid].myPartyId .= broadcast((x,y) -> mean([x,y]), model[agentid].myPartyId,
+                                                        model[whoIllVote_now].pos) # this guy allocates 3 times!
 end
 
-# TODO: implement this guy
+
+function get_mean_neighborhoodPid(agentid,model, ρ)
+    neighbors = abm.nearby_ids(model[agentid].pos, model, ρ )
+    #mean_neighbor_Pid = MVector{n}(ntuple(x-> 0., n)), do this later
+    StatsBase.mean(map(x->model[x].myPartyId, neighbors))
+    #= TODO: This map allocates a lot. Later I'll fix that by rolling my mean loop =#
+end
+
+
 function updatePid_neighbors_influence!(agentid,model, ρ, ϕ)
-
-
+    if rand() < ϕ
+        neighborsmean = get_mean_neighborhoodPid(agentid,model, ρ)
+        model[agentid].myPartyId .= broadcast((x,y) -> mean([x,y]),
+                                              model[agentid].myPartyId,
+                                              neighborsmean)
+    end
 end
 
 end  # this is where the module ends!!!

@@ -255,8 +255,6 @@ let ncandidates = 3
                  for agentid in pid.abm.allids(m)])
 end
 
-
-
 # this shows that this procedure might have a huge impact !
 let ncandidates = 3
     nissues = 1
@@ -267,4 +265,34 @@ let ncandidates = 3
     pid.update_partyid!(1,m)
     println(m[1].myPartyId)
 
+end
+
+
+@test let ncandidates = 3
+    nissues = 3
+    κ = 0.1
+    m = pid.initialize_model(1000,nissues, ncandidates, κ)
+    pid.candidates_iteration_setup!(m)
+     for i in pid.abm.allids(m)
+        pid.update_partyid!(i,m)
+     end
+
+    agentid = 1
+    ρ = 0.1
+    length(pid.get_median_neighborhoodPid(agentid,m, ρ)) == nissues
+end
+
+
+
+
+
+let ncandidates = 3
+    nissues = 3
+    κ = 0.1
+    m = pid.initialize_model(1000,nissues, ncandidates, κ)
+    pid.candidates_iteration_setup!(m)
+    pid.update_partyid!2(1,m)
+     # for i in pid.abm.allids(m)
+     #    pid.update_partyid!2(i,m)
+     # endd
 end
