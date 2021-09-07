@@ -234,11 +234,6 @@ function model_step!(model)
                                        model.properties[:params].ρ,
                                        model.properties[:params].ϕ)
     end
-
-
-
-
-
 end
 
 
