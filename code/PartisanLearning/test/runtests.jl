@@ -104,7 +104,6 @@ let m1 = agents_model(100); ncandidates = 4
 #     pid.get_closest_candidate(testid,model)
 # end
 
-
 # TODO: test if I am indeed choosing the most voted!
 
 let model = agents_model(10)
@@ -117,8 +116,8 @@ let model = agents_model(10)
 end
 
 
-
-# TODO: report there is something very wrong with the edistance proc in Agents.jl
+#
+# BUG: report there is something very wrong with the edistance proc in Agents.jl
 
 #= for i in 1:100
 let model = agents_model(1000)
@@ -284,15 +283,14 @@ end
 
 
 
+# FIXME: Investigate the performance of model_step!
+# let ncandidates = 3
+#     nissues = 3
+#     κ = 0.1
+#     m = pid.initialize_model(1000,nissues, ncandidates, κ)
+#     @time pid.model_step!(m)
 
-
-let ncandidates = 3
-    nissues = 3
-    κ = 0.1
-    m = pid.initialize_model(1000,nissues, ncandidates, κ)
-    pid.candidates_iteration_setup!(m)
-    pid.update_partyid!2(1,m)
-     # for i in pid.abm.allids(m)
-     #    pid.update_partyid!2(i,m)
-     # endd
-end
+#      # for i in pid.abm.allids(m)
+#      #    pid.update_partyid!2(i,m)
+#      # endd
+# end

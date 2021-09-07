@@ -62,11 +62,11 @@ SCHEDULED: <2021-08-06 sex>
 
 * TODO Anything radius related should use nearby_ids proc
 
-* TODO write MWE of pos error
+* DONE write MWE of pos error
 
 * TODO  Fix the anchor issue generator
 * TODO Code the systemic variables to be collected while running the model;
 * TODO Code an interactive widget to explore the model  (and generate an executable, if possible, to send to you);
-* TODO Write unit*tests for potential bugs;
+* DONE Write unit*tests for potential bugs;
 * TODO Optimize the code;
 * TODO Code a sensitivity analysis.
