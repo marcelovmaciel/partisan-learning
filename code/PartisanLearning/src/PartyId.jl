@@ -111,12 +111,13 @@ function initialize_model(nagents::Int, nissues::Int, ncandidates::Int,
 
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
     properties = Dict(:incumbent => 0,
-                      :params => ModelParams(nagents = nagents,
-                                             nissues = nissues,
-                                             ncandidates = ncandidates,
-                                             κ = κ,
-                                             ρ = ρ,
-                                             ϕ = ϕ))
+                      :nagents => nagents,
+                      :nissues => nissues,
+                      :ncandidates => ncandidates,
+                      :κ => κ,
+                      :ρ => ρ,
+                      :ϕ => ϕ)
+
     model = abm.ABM(Voter{nissues}, space, properties = properties)
 
     for i in 1:nagents
@@ -162,12 +163,12 @@ end
 "candidates_iteration_setup!(model::abm.ABM)"
 function candidates_iteration_setup!(m::abm.ABM)
     reset_candidates!(m)
-    set_candidates!(m.properties[:params].ncandidates-1, m)
+    set_candidates!(m.properties[:ncandidates]-1, m)
 end
 
 "get_whoAgentVotesfor(agentid, model)"
 function get_whoAgentVotesfor(agentid, model)
-    κ = model.properties[:params].κ
+    κ = model.properties[:κ]
     closest_to_me = get_closest_candidate(agentid,model)
     closest_to_myPartyId = get_closest_candidate(agentid,
                                                  model,
@@ -213,7 +214,6 @@ function updatePid_neighbors_influence!(agentid,model, ρ, ϕ)
     end
 end
 
-
 function model_step!(model)
     candidates_iteration_setup!(model)
 
@@ -227,16 +227,35 @@ function model_step!(model)
         update_partyid!(i,model)
     end
 
-    #= In this loop agents deal with their neighbors' udpates=#
+    = In this loop agents deal with their neighbors' udpates
 
     for i in abm.allids(model)
         updatePid_neighbors_influence!(i,model,
-                                       model.properties[:params].ρ,
-                                       model.properties[:params].ϕ)
+                                       model.properties[:ρ],
+                                       model.properties[:ϕ])
     end
 end
 
+# ** Data Collection
 
+#=
+TODO: Record longest streak of incumbent
+TODO: Record proportion of voters who voted against PartyId candidate
+- Maybe also some measures of the distribution? Who knows....
+
+=#
+
+function HaveIVotedAgainstMyParty(agentid::Int, model)
+    closest_to_myPartyId = get_closest_candidate(agentid,
+                                                 model,
+                                                 :myPartyId)
+    return(get_whoAgentVotesfor(agentid, model) == closest_to_myPartyId)
+end
+
+HaveIVotedAgainstMyParty(agentid::Voter, model) = HaveIVotedAgainstMyParty(agentid.id,model)
+
+adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
+mdata = [:incumbent]
 
 
 
