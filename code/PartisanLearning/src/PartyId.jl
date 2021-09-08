@@ -227,7 +227,7 @@ function model_step!(model)
         update_partyid!(i,model)
     end
 
-    = In this loop agents deal with their neighbors' udpates
+    # In this loop agents deal with their neighbors' udpates
 
     for i in abm.allids(model)
         updatePid_neighbors_influence!(i,model,
@@ -239,9 +239,10 @@ end
 # ** Data Collection
 
 #=
-TODO: Record longest streak of incumbent
-TODO: Record proportion of voters who voted against PartyId candidate
-- Maybe also some measures of the distribution? Who knows....
+
+FIXME: Test what happens with the  proportion of voters who voted against PartyId candidate
+
+# Maybe also some measures of the distribution? Who knows....
 
 =#
 
@@ -249,7 +250,7 @@ function HaveIVotedAgainstMyParty(agentid::Int, model)
     closest_to_myPartyId = get_closest_candidate(agentid,
                                                  model,
                                                  :myPartyId)
-    return(get_whoAgentVotesfor(agentid, model) == closest_to_myPartyId)
+    return(get_whoAgentVotesfor(agentid, model) != closest_to_myPartyId)
 end
 
 HaveIVotedAgainstMyParty(agentid::Voter, model) = HaveIVotedAgainstMyParty(agentid.id,model)
