@@ -256,7 +256,7 @@ end
 
 # this shows that this procedure might have a huge impact !
 let ncandidates = 3
-    nissues = 1
+    nissues =
     κ = 0.1
     m = pid.initialize_model(1000,nissues, ncandidates, κ)
     pid.candidates_iteration_setup!(m)
@@ -280,6 +280,18 @@ end
     ρ = 0.1
     length(pid.get_median_neighborhoodPid(agentid,m, ρ)) == nissues
 end
+
+
+
+
+ let ncandidates = 3
+    nissues = 3
+    κ = 0.1
+    m = pid.initialize_model(1000,nissues, ncandidates, κ)
+    pid.candidates_iteration_setup!(m)
+    map(x->pid.HaveIVotedAgainstMyParty(x,m), pid.abm.allagents(m))
+end
+
 
 
 

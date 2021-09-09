@@ -92,13 +92,13 @@ m = pid.initialize_model(1000,nissues, ncandidates)
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
 
-# fig,_ = pl.abm_play(
-#     m,
-#     pid.abm.dummystep,
-#     pid.model_step!,
-#     ac = agent_colors,
-#     as = agent_size,
-# )
+fig,stepper = pl.abm_play(
+    m,
+    pid.abm.dummystep,
+    pid.model_step!,
+    ac = agent_colors,
+    as = agent_size,
+)
 
 # fig |> typeof
 
@@ -108,9 +108,7 @@ params = Dict(:κ => 0.0:0.1:1,
 
 adata = [(a->(pid.HaveIVotedAgainstMyParty(a,m)), count)]
 
-
 alabels = ["Voted Against PartyId"]
-
 
 fig,adf,mdf = abm_data_exploration(m,
                                    pid.abm.dummystep,
@@ -121,41 +119,55 @@ fig,adf,mdf = abm_data_exploration(m,
                                    ac = agent_colors,
                                    as = agent_size)
 
-
-
 # ** Trying to add the partyid stuff
 #
  fig |> typeof |> fieldnames
 
+ncandidates = 3
+nissues = 2
+m = pid.initialize_model(1000,nissues, ncandidates)
 
+agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
+agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
 
-
+fig,stepper = pl.abm_play(
+    m,
+    pid.abm.dummystep,
+    pid.model_step!,
+    ac = agent_colors,
+    as = agent_size,
+)
 
 # function static_preplot!(ax, model)
 #     obj = CairoMakie.scatter!([50 50]; color = :red) # Show position of teacher
 #     CairoMakie.hidedecorations!(ax) # hide tick labels etc.
 #     CairoMakie.translate!(obj, 0, 0, 5) # be sure that the teacher will be above students
 # end
-idxes = collect(pid.abm.allids(m))
-xs = Observable([m[x].myPartyId[1] for x in  idxes])
-ys = Observable([m[x].myPartyId[2] for x in  idxes])
-oxs = on(xs) do val
-    val
-end
+# idxes = collect(pid.abm.allids(m))
+# xs = Observable([m[x].myPartyId[1] for x in  idxes])
+# ys = Observable([m[x].myPartyId[2] for x in  idxes])
 
-oys =  on(ys) do val
-    val
-end
-
-
-
-ax, scat = scatter(fig[1,3],xs,ys)
-
+ax, scat = scatter(fig[1,2],
+                   Observable([Point{2}([m[x].myPartyId[1],m[x].myPartyId[2]]) for x in  pid.abm.allids(m)]))
 
 ax.aspect = AxisAspect(1)
 
 fig
 
+# oxs = on(xs) do val
+#     val
+# end
+
+# oys =  on(ys) do val
+#     val
+# end
+
+ax, scat = scatter(fig[1,3],xs,ys)
+
+
+
+
+fig.layout
 
 fig2,stepper = pl.abm_play(
     m,
@@ -166,9 +178,7 @@ fig2,stepper = pl.abm_play(
 )
 
 
-stepper
-
-
+stepper.pos
 
 scatter(fig2[1,3],xs,ys)
 
