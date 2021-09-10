@@ -214,6 +214,7 @@ function updatePid_neighbors_influence!(agentid,model, ρ, ϕ)
     end
 end
 
+
 function model_step!(model)
     candidates_iteration_setup!(model)
 
@@ -246,6 +247,8 @@ FIXME: Test what happens with the  proportion of voters who voted against PartyI
 
 =#
 
+
+
 function HaveIVotedAgainstMyParty(agentid::Int, model)
     closest_to_myPartyId = get_closest_candidate(agentid,
                                                  model,
@@ -253,11 +256,26 @@ function HaveIVotedAgainstMyParty(agentid::Int, model)
     return(get_whoAgentVotesfor(agentid, model) != closest_to_myPartyId)
 end
 
-HaveIVotedAgainstMyParty(agentid::Voter, model) = HaveIVotedAgainstMyParty(agentid.id,model)
+HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
 
-adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
+#adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
 mdata = [:incumbent]
 
+
+function get_distance_IvsParty(agentid, model)
+    κ = model.properties[:κ]
+    closest_to_me = get_closest_candidate(agentid,model)
+    closest_to_myPartyId = get_closest_candidate(agentid,
+                                                 model,
+                                                 :myPartyId)
+    whoillvotefor = closest_to_myPartyId
+    two_candidates_distance = dist.euclidean(model[closest_to_me].pos,
+                                             model[closest_to_myPartyId].pos)
+    return(two_candidates_distance)
+
+end
+
+get_distance_IvsParty(agent::Voter, model) = get_distance_IvsParty(agent.id, model)
 
 
 end  # this is where the module ends!!!

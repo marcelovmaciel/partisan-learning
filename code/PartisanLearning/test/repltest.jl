@@ -7,7 +7,7 @@ const is = pl.IssueSalience
 const pid = pl.PartyId
 using InteractiveDynamics
 using GLMakie
-
+using Agents
 # * Issue Salience Model
 fooparams = is.IssueSalience.ModelParams()
 
@@ -92,23 +92,24 @@ m = pid.initialize_model(1000,nissues, ncandidates)
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
 
-fig,stepper = pl.abm_play(
-    m,
-    pid.abm.dummystep,
-    pid.model_step!,
-    ac = agent_colors,
-    as = agent_size,
-)
-
 # fig |> typeof
 
 params = Dict(:κ => 0.0:0.1:1,
               :ρ => 0.0:0.1:1,
               :ϕ => 0.0:0.1:1)
 
-adata = [(a->(pid.HaveIVotedAgainstMyParty(a,m)), count)]
 
-alabels = ["Voted Against PartyId"]
+# So, bigger ρ means agents will converge faster to the mean
+# partyid
+# higher phi has the same effect
+#higher kappa means agents will tend to vote more for
+#their partyid
+
+
+adata = [(a->(pid.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+         (a->(pid.get_distance_IvsParty(a,m)), pid.StatsBase.mean)]
+
+alabels = ["Voted Against PartyId", "dist(closest,party's)"]
 
 fig,adf,mdf = abm_data_exploration(m,
                                    pid.abm.dummystep,
@@ -138,6 +139,64 @@ fig,stepper = pl.abm_play(
     as = agent_size,
 )
 
+# fig |> typeof |> fieldnames
+
+# fig.scene |> typeof |> fieldnames
+
+pids = (model) -> ([Point{2}([m[x].myPartyId[1],m[x].myPartyId[2]]) for x in  pid.abm.allids(model)])
+
+abm_play!(fig,stepper, m, pid.abm.dummystep,
+          pid.model_step!; newvartoplot = pids, newviewer = scatter, newviewerpos = (1,2), spu = 1)
+
+fig
+
+
+function abm_play!(fig, abmstepper, model, agent_step!, model_step!; spu,
+                   newvartoplot::Function,
+                   newplotter::Function,
+                   newviewerpos::Tuple)
+    # preinitialize a bunch of stuff
+    model0 = deepcopy(model)
+    modelobs = Observable(model) # only useful for resetting
+    speed, slep, step, run, reset, = InteractiveDynamics.abm_controls_play!(fig, model, spu, false)
+
+    stuff = newvartoplot(model)
+    myobs = Observable(stuff)
+    newplotter(fig[newviewerpos...], myobs)
+
+    # Clicking the step button
+    on(step) do clicks
+        n = speed[]
+        Agents.step!(abmstepper, model, agent_step!, model_step!, n)
+        myobs[] = newvartoplot(model)
+    end
+
+
+    # Clicking the run button
+    isrunning = Observable(false)
+    on(run) do clicks; isrunning[] = !isrunning[]; end
+    on(run) do clicks
+        @async while isrunning[]
+            n = speed[]
+            model = modelobs[] # this is useful only for the reset button
+            myobs[] = newvartoplot(model)
+            Agents.step!(abmstepper, model, agent_step!, model_step!, n)
+
+
+            slep[] == 0 ? yield() : sleep(slep[])
+            isopen(fig.scene) || break # crucial, ensures computations stop if closed window.
+        end
+    end
+    # Clicking the reset button
+    on(reset) do clicks
+        modelobs[] = deepcopy(model0)
+        Agents.step!(abmstepper, modelobs[], agent_step!, model_step!, 0)
+    end
+    return nothing
+end
+
+
+
 # function static_preplot!(ax, model)
 #     obj = CairoMakie.scatter!([50 50]; color = :red) # Show position of teacher
 #     CairoMakie.hidedecorations!(ax) # hide tick labels etc.
@@ -147,12 +206,9 @@ fig,stepper = pl.abm_play(
 # xs = Observable([m[x].myPartyId[1] for x in  idxes])
 # ys = Observable([m[x].myPartyId[2] for x in  idxes])
 
-ax, scat = scatter(fig[1,2],
-                   Observable([Point{2}([m[x].myPartyId[1],m[x].myPartyId[2]]) for x in  pid.abm.allids(m)]))
-
-ax.aspect = AxisAspect(1)
 
 fig
+
 
 # oxs = on(xs) do val
 #     val
