@@ -193,7 +193,6 @@ function update_partyid!(agentid,model)
                                                         model[whoIllVote_now].pos) # this guy allocates 3 times!
 end
 
-
 "function get_mean_neighborhoodPid(agentid,model, ρ)
 This is a helper for updatePid_neighbors_influence!"
 function get_mean_neighborhoodPid(agentid,model, ρ)
@@ -229,7 +228,7 @@ function model_step!(model)
     end
 
     # In this loop agents deal with their neighbors' udpates
-
+    # FIXME: i probably gonna need to add a field here!
     for i in abm.allids(model)
         updatePid_neighbors_influence!(i,model,
                                        model.properties[:ρ],
