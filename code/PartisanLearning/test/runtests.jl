@@ -1,4 +1,6 @@
 using Test
+using Revise
+
 import PartisanLearning as pl
 const is = pl.IssueSalience
 const pid = pl.PartyId
@@ -193,7 +195,6 @@ pid.candidates_iteration_setup!(m)
 # TODO check if candidates_iteration_setup! keeps the incumbent and add ncandidates - 1 other candidates
 
 
-
 @testset "test if the candidate closest to agents differs from candidate closest to their partyid" begin
     @test let ncandidates = 10
         nissues = 1
@@ -282,14 +283,43 @@ end
 end
 
 
-
-
  let ncandidates = 3
     nissues = 3
     κ = 0.1
     m = pid.initialize_model(1000,nissues, ncandidates, κ)
     pid.candidates_iteration_setup!(m)
     map(x->pid.HaveIVotedAgainstMyParty(x,m), pid.abm.allagents(m))
+end
+
+
+@testset "Creating a Dict of fields really copies the field rather than ref the pointer?" begin
+    @test let
+        ncandidates = 3
+        nissues = 2
+        κ = 0.1
+        m = pid.initialize_model(1000,nissues, ncandidates, κ)
+
+        foodict = Dict((m[x].id => m[x].myPartyId)
+                       for x in pid.abm.allids(m))
+        foodict |> typeof |> println
+
+        first_test = foodict[1] == m[1].myPartyId
+        println
+        m[1].myPartyId  = pid.MVector{2}((2., 2.))
+        second_test = foodict[1] != m[1].myPartyId
+        first_test && second_test
+    end
+end
+
+
+@testset "Is model.properties[:partyids] actually copying stuff properly (in the initial condition)? " begin
+    let
+        ncandidates = 3
+        nissues = 2
+        κ = 0.1
+        m = pid.initialize_model(1000,nissues, ncandidates, κ)
+        all(m.properties[:partyids][i] == m[i].myPartyId for i in pid.abm.allids(m))
+    end
 end
 
 
@@ -306,3 +336,22 @@ end
 #      #    pid.update_partyid!2(i,m)
 #      # endd
 # end
+
+
+@test let
+        ncandidates = 3
+        nissues = 2
+        κ = 0.1
+        m = pid.initialize_model(1000,nissues, ncandidates, κ)
+
+        foodict = Dict((m[x].id => m[x].myPartyId)
+                       for x in pid.abm.allids(m))
+        foodict |> typeof |> println
+
+        first_test = foodict[1] == m[1].myPartyId
+        println
+        m[1].myPartyId  = pid.MVector{2}((2., 2.))
+        second_test = foodict[1] != m[1].myPartyId
+        first_test && second_test
+    end
+end

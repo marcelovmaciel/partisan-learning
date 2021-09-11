@@ -109,14 +109,24 @@ end
 function initialize_model(nagents::Int, nissues::Int, ncandidates::Int,
                           κ = 0.1, ρ = 0.2, ϕ = 0.2)
 
+
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
+    dummydict_forPid = Dict{Int64, Tuple{Float64, Float64}}()
+
+    #=
+    I am adding that as a model property to later:
+    1) use it for synchronous partyid update
+    2) plotting (closer to the sugarscape example)
+    =#
+
     properties = Dict(:incumbent => 0,
                       :nagents => nagents,
                       :nissues => nissues,
                       :ncandidates => ncandidates,
                       :κ => κ,
                       :ρ => ρ,
-                      :ϕ => ϕ)
+                      :ϕ => ϕ,
+                      :partyids => dummydict_forPid)
 
     model = abm.ABM(Voter{nissues}, space, properties = properties)
 
@@ -136,10 +146,12 @@ function initialize_model(nagents::Int, nissues::Int, ncandidates::Int,
         model[i].myPartyId = closest_candidate_pos
     end
 
-    model.properties[:incumbent]= new_incumbent
-
+    model.properties[:incumbent] = new_incumbent
+    model.properties[:partyids] = Dict((model[x].id => model[x].myPartyId)
+                                       for x in abm.allids(model))
     return(model)
 end
+
 
 # ** Stepping
 #=
@@ -191,14 +203,19 @@ function update_partyid!(agentid,model)
     whoIllVote_now = get_whoAgentVotesfor(agentid, model) #this guy allocates  17 times!
     model[agentid].myPartyId .= broadcast((x,y) -> mean([x,y]), model[agentid].myPartyId,
                                                         model[whoIllVote_now].pos) # this guy allocates 3 times!
+    model.properties[:partyids][agentid] = model[agentid].myPartyId
 end
+
 
 "function get_mean_neighborhoodPid(agentid,model, ρ)
 This is a helper for updatePid_neighbors_influence!"
 function get_mean_neighborhoodPid(agentid,model, ρ)
     neighbors = abm.nearby_ids(model[agentid].pos, model, ρ )
     #mean_neighbor_Pid = MVector{n}(ntuple(x-> 0., n)), do this later
-    StatsBase.mean(map(x->model[x].myPartyId, neighbors))
+    StatsBase.mean(map(x->model.properties[:partyids][x], neighbors))
+    #= Notice that I'm looking at the dictionary!
+    With that I can mutate synchronously the voters myPartyIds.
+    After I mutate all of them I gotta udpate the model.properties[:partyids]=#
     #= FIXME: This map allocates a lot. Later I'll fix that by rolling my mean loop =#
 end
 
@@ -228,12 +245,16 @@ function model_step!(model)
     end
 
     # In this loop agents deal with their neighbors' udpates
-    # FIXME: i probably gonna need to add a field here!
     for i in abm.allids(model)
         updatePid_neighbors_influence!(i,model,
                                        model.properties[:ρ],
                                        model.properties[:ϕ])
     end
+
+    for i in abm.allids(model)
+        model.properties[:partyids][i] = model[i].myPartyId
+    end
+
 end
 
 # ** Data Collection

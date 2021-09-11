@@ -85,7 +85,7 @@ end
 
 # * PartyidModel
 
-ncandidates = 3
+ncandidates = 10
 nissues = 2
 m = pid.initialize_model(1000,nissues, ncandidates)
 
@@ -138,17 +138,17 @@ fig,stepper = pl.abm_play(
     ac = agent_colors,
     as = agent_size,
 )
-
 # fig |> typeof |> fieldnames
-
 # fig.scene |> typeof |> fieldnames
+
+
 
 pids = (model) -> ([Point{2}([m[x].myPartyId[1],m[x].myPartyId[2]]) for x in  pid.abm.allids(model)])
 
-abm_play!(fig,stepper, m, pid.abm.dummystep,
-          pid.model_step!; newvartoplot = pids, newviewer = scatter, newviewerpos = (1,2), spu = 1)
+scatter(fig[1,2], Observable(pids(m)))
 
-fig
+abm_play!(fig,stepper, m, pid.abm.dummystep,
+          pid.model_step!; newvartoplot = pids, newplotter = scatter!, newviewerpos = (1,2), spu = 0.1)
 
 
 function abm_play!(fig, abmstepper, model, agent_step!, model_step!; spu,
@@ -160,15 +160,16 @@ function abm_play!(fig, abmstepper, model, agent_step!, model_step!; spu,
     modelobs = Observable(model) # only useful for resetting
     speed, slep, step, run, reset, = InteractiveDynamics.abm_controls_play!(fig, model, spu, false)
 
-    stuff = newvartoplot(model)
-    myobs = Observable(stuff)
-    newplotter(fig[newviewerpos...], myobs)
+    stuff = newvartoplot(model) # I get the data from the model
+    myobs = Observable(stuff) # Make it observable
+    lift(x->newplotter(fig[newviewerpos...], x), myobs) # Add it to the figure
+
 
     # Clicking the step button
     on(step) do clicks
         n = speed[]
         Agents.step!(abmstepper, model, agent_step!, model_step!, n)
-        myobs[] = newvartoplot(model)
+        modelobs[] = newvartoplot(model)
     end
 
 
@@ -179,7 +180,6 @@ function abm_play!(fig, abmstepper, model, agent_step!, model_step!; spu,
         @async while isrunning[]
             n = speed[]
             model = modelobs[] # this is useful only for the reset button
-            myobs[] = newvartoplot(model)
             Agents.step!(abmstepper, model, agent_step!, model_step!, n)
 
 
