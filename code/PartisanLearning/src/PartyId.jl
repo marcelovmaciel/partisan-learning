@@ -297,5 +297,7 @@ end
 
 get_distance_IvsParty(agent::Voter, model) = get_distance_IvsParty(agent.id, model)
 
+# TODO add data collection: incumbent eccentricity! maybe also a mean non-incubemt eccentricity
+
 
 end  # this is where the module ends!!!

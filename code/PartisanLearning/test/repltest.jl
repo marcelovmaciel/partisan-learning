@@ -138,40 +138,51 @@ fig,stepper = pl.abm_play(
     ac = agent_colors,
     as = agent_size,
 )
+
 # fig |> typeof |> fieldnames
 # fig.scene |> typeof |> fieldnames
 
+#pids = (model) -> ([Point{2}([m[x].myPartyId[1],m[x].myPartyId[2]]) for x in  pid.abm.allids(model)])
+#collect(Point(x) for x in values(m.properties[:partyids]))
+#foo = Observable(collect(values(m.properties[:partyids])))
+
+#scatter(fig[1,2], foo)
+
+# fig
 
 
-pids = (model) -> ([Point{2}([m[x].myPartyId[1],m[x].myPartyId[2]]) for x in  pid.abm.allids(model)])
+#foo[] = collect(values(m.properties[:partyids]))
 
-scatter(fig[1,2], Observable(pids(m)))
 
-abm_play!(fig,stepper, m, pid.abm.dummystep,
-          pid.model_step!; newvartoplot = pids, newplotter = scatter!, newviewerpos = (1,2), spu = 0.1)
+#fig
+# fig2
+foo = Observable(collect(values(m.properties[:partyids])))
+
+
+scatter(fig[1,2], foo)
+
+function newstep(m, foo = foo)
+    pid.model_step!(m)
+    foo[] = collect(values(m.properties[:partyids]))
+end
 
 
 function abm_play!(fig, abmstepper, model, agent_step!, model_step!; spu,
-                   newvartoplot::Function,
-                   newplotter::Function,
-                   newviewerpos::Tuple)
+                   newvartoplot, obsstepper)
     # preinitialize a bunch of stuff
     model0 = deepcopy(model)
     modelobs = Observable(model) # only useful for resetting
     speed, slep, step, run, reset, = InteractiveDynamics.abm_controls_play!(fig, model, spu, false)
 
-    stuff = newvartoplot(model) # I get the data from the model
-    myobs = Observable(stuff) # Make it observable
-    lift(x->newplotter(fig[newviewerpos...], x), myobs) # Add it to the figure
+    #lift(x->newplotter(fig[newviewerpos...], x), collect(values(myobs.val))) # Add it to the figure
 
 
+# fig
     # Clicking the step button
     on(step) do clicks
         n = speed[]
         Agents.step!(abmstepper, model, agent_step!, model_step!, n)
-        modelobs[] = newvartoplot(model)
     end
-
 
     # Clicking the run button
     isrunning = Observable(false)
@@ -195,8 +206,14 @@ function abm_play!(fig, abmstepper, model, agent_step!, model_step!; spu,
     return nothing
 end
 
+function obsstep(m)
+    collect(values(m.properties[:partyids]))
+end
 
-
+abm_play!(fig,stepper, m, pid.abm.dummystep,
+          newstep; newvartoplot = foo,
+          obsstepper = obsstep, spu = 0.1)
+fig
 # function static_preplot!(ax, model)
 #     obj = CairoMakie.scatter!([50 50]; color = :red) # Show position of teacher
 #     CairoMakie.hidedecorations!(ax) # hide tick labels etc.
