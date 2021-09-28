@@ -5,6 +5,7 @@ using Revise
 import PartisanLearning as pl
 const is = pl.IssueSalience
 const pid = pl.PartyId
+const pla =pl.PartyLabel
 using InteractiveDynamics
 using GLMakie
 using Agents
@@ -87,7 +88,20 @@ end
 
 ncandidates = 10
 nissues = 2
+
+
 m = pid.initialize_model(1000,nissues, ncandidates)
+
+ids = collect(allids(m))
+
+parties = pid
+
+candidate = pid.StatsBase.sample(collect(nearby_ids(m[parties[1]].pos,m,0.1, exact = true)))
+
+pid.dist.euclidean(m[parties[1]].pos, m[candidate].pos)
+
+
+
 
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
@@ -118,7 +132,7 @@ fig,adf,mdf = abm_data_exploration(m,
                                    adata, pid.mdata,
                                    alabels,
                                    ac = agent_colors,
-                                   as = agent_size)
+                                   as = agent_size, spu = 1)
 
 # ** Trying to add the partyid stuff
 #

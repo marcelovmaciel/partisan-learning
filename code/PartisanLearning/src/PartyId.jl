@@ -39,6 +39,7 @@ const bounds = (0,1)
     ϕ = 0.2
 end
 
+
 function Voter(id::Int,nissues =  1,
                pos = Tuple(rand(distri.Uniform(bounds...),nissues)))
     amIaCandidate = false
@@ -111,6 +112,7 @@ function initialize_model(nagents::Int, nissues::Int, ncandidates::Int,
 
 
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
+
     dummydict_forPid = Dict{Int64, Tuple{Float64, Float64}}()
 
     #=
