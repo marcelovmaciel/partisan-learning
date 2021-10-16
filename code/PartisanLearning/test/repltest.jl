@@ -1,11 +1,12 @@
 import Pkg
+
 Pkg.activate("../")
 
 using Revise
 import PartisanLearning as pl
 const is = pl.IssueSalience
 const pid = pl.PartyId
-const pla =pl.PartyLabel
+const pla = pl.PartyLabel
 using InteractiveDynamics
 using GLMakie
 using Agents
@@ -87,16 +88,34 @@ end
 # * PartyidModel
 
 ncandidates = 10
-nissues = 2
+nissues = 5
 
 
-m = pid.initialize_model(1000,nissues, ncandidates)
+postype = typeof(ntuple(x -> 1.,nissues))
+    dummydict_forPid = Dict{Int64, postype}()
+    voterBallotTracker = Dict{Int64, Vector{postype}}()
+
+typeof(ntuple(x -> 1.,2))
+
+m = pla.initialize_model(1000,nissues, ncandidates)
+
+m.properties[:voterBallotTracker]
+
+m.properties[:partyids]
 
 ids = collect(allids(m))
 
-parties = pid
+parties = pla.sample_parties_pos(2,m)
 
 candidate = pid.StatsBase.sample(collect(nearby_ids(m[parties[1]].pos,m,0.1, exact = true)))
+
+a = Tuple[]
+
+push!(a, (1,1))
+
+a
+
+collect((pid.StatsBase.sample(collect(nearby_ids(p,m,0.1, exact = true))) for p in parties))
 
 pid.dist.euclidean(m[parties[1]].pos, m[candidate].pos)
 
@@ -275,3 +294,27 @@ fig |> typeof |> fieldnames
 fig.content[end-1]
 
 on
+
+
+
+
+
+# * PartyLabelModel
+
+# * Test this
+using Agents
+using InteractiveDynamics
+using GLMakie
+using Statistics
+
+model, agent_step!, model_step! = Models.schelling()
+
+params = Dict(:min_to_be_happy => 1:1:5)
+
+fig, adf, mdf = abm_data_exploration(model, agent_step!, model_step!, params;
+                                     adata=[(:mood, mean)])
+
+
+count_unhappy(model) = count(a.mood == false for a in allagents(model))
+fig, adf, mdf = abm_data_exploration(model, agent_step!, model_step!, params;
+    adata=[(:mood, mean)], mdata=[count_unhappy])

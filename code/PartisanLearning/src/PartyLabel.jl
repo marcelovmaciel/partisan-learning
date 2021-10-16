@@ -3,7 +3,6 @@
 #= This is a copy of the Party id model. Why am I copying
 it? Because the previous version is not wrong, but design needs to change. I
 still wanna play with the other version so I'll keep it. =#
-
 #=
 What will change in this version?
 I'll need to add some sticky parties,
@@ -14,7 +13,6 @@ Also, the update rule is completely different now.
 See the notes/sketchsofaModel/partyid-sketch.pdf design
 document for more on that.
 =#
-
 module PartyLabel
 # ** Initial condition
 #= the initial logic is the following:
@@ -49,10 +47,10 @@ const bounds = (0,1)
     ncandidates = 10
     nissues = 1
     bounds = bounds
-    κ = 0.1
-    ρ = 0.2
-    ϕ = 0.2
-    δ = 0.1
+    κ = 0.1 # this influences whether I'll vote against my party or not
+    ρ = 0.2 # this is the radius of neighbors I take a look. I believe it can be dropped
+    ϕ = 0.2 # this is related to neighbors influence (I Think it can be dropped)
+    δ = 0.1 # this influences the radius of candidates a party samples from
 end
 
 
@@ -63,7 +61,6 @@ function Voter(id::Int,nissues =  1,
     return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
 end
 
-
 function sample_parties_pos(nparties, model)
     ids = collect(abm.allids(model))
     partiesposs = map(x-> model[x].pos,
@@ -71,7 +68,7 @@ function sample_parties_pos(nparties, model)
     return(partiesposs)
 end
 
-"set_candidates!(ncandidates,model)"
+
 function set_candidates!(partiesposs,model::abm.ABM, δ = 0.1)
         candidateids = (sample(collect(nearby_ids(p,model,δ, exact = true))) for p in partiesposs)
 
@@ -84,7 +81,7 @@ end
 
 function set_candidates!(model::abm.ABM)
 
-    candidateids = (sample(collect(nearby_ids(p,
+    candidateids = (sample(collect(abm.nearby_ids(p,
                                               model,
                                               model.properties[:δ],
                                               exact = true))) for p in model.properties[:partiesposs])
@@ -155,8 +152,9 @@ function initialize_model(nagents::Int, nissues::Int, nparties,
 
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
 
-    dummydict_forPid = Dict{Int64, Tuple{Float64, Float64}}()
-
+    postype = typeof(ntuple(x -> 1.,nissues))
+    dummydict_forPid = Dict{Int64, postype}()
+    voterBallotTracker = Dict{Int64, Vector{postype}}()
     #=
     I am adding that as a model property to later:
     1) use it for synchronous partyid update
@@ -170,7 +168,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties,
                       :κ => κ,
                       :ρ => ρ,
                       :ϕ => ϕ,
-                      :partyids => dummydict_forPid)
+                      :partyids => dummydict_forPid,
+                      :voterBallotTracker=>voterBallotTracker)
 
     model = abm.ABM(Voter{nissues}, space, properties = properties)
 
@@ -179,14 +178,13 @@ function initialize_model(nagents::Int, nissues::Int, nparties,
         abm.add_agent_pos!(vi, model)
     end
 
-
     model.properties[:partiesposs] = sample_parties_pos(nparties,
                                                         model)
     set_candidates!(model)
     new_incumbent = getmostvoted(model)
 
     for i in abm.allids(model)
-        mypartypos = let
+        mypartypos = begin
             closest_candidate_id = get_closest_candidate(i,model)
             model[closest_candidate_id].myPartyId
         end
@@ -196,6 +194,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties,
     model.properties[:incumbent] = new_incumbent
     model.properties[:partyids] = Dict((model[x].id => model[x].myPartyId)
                                        for x in abm.allids(model))
+    model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:partyids])
     return(model)
 end
 
@@ -309,12 +308,9 @@ end
 #=
 
 FIXME: Test what happens with the  proportion of voters who voted against PartyId candidate
-
 # Maybe also some measures of the distribution? Who knows....
 
 =#
-
-
 
 function HaveIVotedAgainstMyParty(agentid::Int, model)
     closest_to_myPartyId = get_closest_candidate(agentid,
@@ -344,7 +340,7 @@ end
 
 get_distance_IvsParty(agent::Voter, model) = get_distance_IvsParty(agent.id, model)
 
-# TODO add data collection: incumbent eccentricity! maybe also a mean non-incubemt eccentricity
+# TODO add data collection: incumbent eccentricity! maybe also a mean non-incumbent eccentricity
 
 
 end  # this is where the module ends!!!
