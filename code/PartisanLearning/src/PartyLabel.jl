@@ -34,7 +34,7 @@ mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
     amIaCandidate::Bool
-    myPartyId::MVector{n,Float64}
+    myPartyId::Int
     #= Note that if a voter is a candidate then its ~myPartyId~ should be the
 agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
 throughout simulation inspection =#
@@ -57,41 +57,35 @@ end
 function Voter(id::Int,nissues =  1,
                pos = Tuple(rand(distri.Uniform(bounds...),nissues)))
     amIaCandidate = false
-    myPartyId = MVector{nissues}(pos)
+    myPartyId = -3
     return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
 end
 
 function sample_parties_pos(nparties, model)
     ids = collect(abm.allids(model))
-    partiesposs = map(x-> model[x].pos,
-                      sample(ids,nparties, replace = false))
+    partiesposs = Dict(map(x-> (x,model[x].pos),
+                      sample(ids,nparties, replace = false)))
     return(partiesposs)
 end
 
 
 function set_candidates!(partiesposs,model::abm.ABM, δ = 0.1)
-        candidateids = (sample(collect(nearby_ids(p,model,δ, exact = true))) for p in partiesposs)
 
-    for (candidate,partypos) in zip(candidateids,partiesposs)
-        model[candidate].amIaCandidate = true
-        model[candidate].myPartyId = MVector{model.properties[:nissues]}(partypos)
+    candidateids = Dict(Pair(pid, sample(collect(abm.nearby_ids(pvalue,model,δ, exact = true)))) for (pid,pvalue) in partiesposs)
+
+    for (pid,candidateid) in candidateids
+        model[candidateid].amIaCandidate = true
+        model[candidateid].myPartyId = pid
         end
 end
 
 
 function set_candidates!(model::abm.ABM)
-
-    candidateids = (sample(collect(abm.nearby_ids(p,
-                                              model,
-                                              model.properties[:δ],
-                                              exact = true))) for p in model.properties[:partiesposs])
-
-    for (candidate,partypos) in zip(candidateids,
-                                    model.properties[:partiesposs])
-        model[candidate].amIaCandidate = true
-        model[candidate].myPartyId = MVector{model.properties[:nissues]}(partypos)
-        end
+    set_candidates!(model.properties[:partiesposs],
+                    model::abm.ABM,
+                    model.properties[:δ])
 end
+
 
 
 "get_closest_candidate(agentid::Int, model::abm.ABM, mypos_or_partypos::Symbol)"
@@ -110,9 +104,9 @@ function get_closest_candidate(agentid::Int,model, mypos_or_partypos = :pos)
     dummyid = -2
     for i in abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
         if model[i].amIaCandidate
-            agentposfield = getfield(model[agentid],
+            candidatepos = getfield(model[agentid],
                                      mypos_or_partypos)
-            distance = dist.euclidean(agentposfield,
+            distance = dist.euclidean(candidatepos,
                                       model[i].pos)
             if distance < dummydistance
                 dummydistance = distance
@@ -148,13 +142,21 @@ end
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
 function initialize_model(nagents::Int, nissues::Int, nparties,
                           κ = 0.1, ρ = 0.2, ϕ = 0.2, δ=0.1)
-
-
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
 
     postype = typeof(ntuple(x -> 1.,nissues))
-    dummydict_forPid = Dict{Int64, postype}()
-    voterBallotTracker = Dict{Int64, Vector{postype}}()
+
+    #=
+    There are three main auxiliary model collections:
+    - What are the parties ids and their positions!
+    - What are the voters parties ids NOW
+    - What are the the voters voting track
+    =#
+
+
+    voters_partyids = Dict{Int64, Int64}()
+    voterBallotTracker = Dict{Int64, Vector{Int}}()
+    partiesposs = Dict{Int64, postype}()
     #=
     I am adding that as a model property to later:
     1) use it for synchronous partyid update
@@ -163,12 +165,12 @@ function initialize_model(nagents::Int, nissues::Int, nparties,
     properties = Dict(:incumbent => 0,
                       :nagents => nagents,
                       :nissues => nissues,
-                      :partiesposs => Tuple[],
+                      :partiesposs => partiesposs,
                       :δ => δ,
                       :κ => κ,
                       :ρ => ρ,
                       :ϕ => ϕ,
-                      :partyids => dummydict_forPid,
+                      :voters_partyids => voters_partyids,
                       :voterBallotTracker=>voterBallotTracker)
 
     model = abm.ABM(Voter{nissues}, space, properties = properties)
@@ -184,17 +186,17 @@ function initialize_model(nagents::Int, nissues::Int, nparties,
     new_incumbent = getmostvoted(model)
 
     for i in abm.allids(model)
-        mypartypos = begin
+        mypartyid = begin
             closest_candidate_id = get_closest_candidate(i,model)
             model[closest_candidate_id].myPartyId
         end
-        model[i].myPartyId = mypartypos
+        model[i].myPartyId = mypartyid
     end
 
     model.properties[:incumbent] = new_incumbent
-    model.properties[:partyids] = Dict((model[x].id => model[x].myPartyId)
+    model.properties[:voters_partyids] = Dict((model[x].id => model[x].myPartyId)
                                        for x in abm.allids(model))
-    model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:partyids])
+    model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:voters_partyids])
     return(model)
 end
 
