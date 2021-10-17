@@ -94,23 +94,23 @@ function set_candidates!(partiesposs,
     for (pid,pvalue) in partiesposs
         # this allows me use it in the initial condition without any problem
         if model.properties[:incumbent] == 0
-            println(pid, " ",getcandidateid(pvalue[:partyposition]))
+            println(getcandidateid(pvalue[:partyposition]),  " ", pid)
             push!(candidatepartypairs,
-                  Pair(pid,getcandidateid(pvalue[:partyposition])))
+                  Pair(getcandidateid(pvalue[:partyposition]),pid))
         # this one helps me to jump the incumbent after the initial condition
         elseif pid == model[model.properties[:incumbent]].myPartyId
                 continue
         else
-            println(pid, " ",getcandidateid(pvalue[:partyposition]))
+            println(getcandidateid(pvalue[:partyposition]), " ", pid)
             push!(candidatepartypairs,
-                  Pair(pid,getcandidateid(pvalue[:partyposition])))
+                  Pair(getcandidateid(pvalue[:partyposition]), pid))
         end
     end
 
     candidateids =  Dict(candidatepartypairs)
     #println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
 
-    for (pid,candidateid) in candidateids
+    for (candidateid, pid) in candidateids
 
         model[candidateid].amIaCandidate = true
         model[candidateid].myPartyId = pid
