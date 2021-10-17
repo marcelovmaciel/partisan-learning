@@ -13,6 +13,9 @@ Also, the update rule is completely different now.
 See the notes/sketchsofaModel/partyid-sketch.pdf design
 document for more on that.
 =#
+
+
+
 module PartyLabel
 # ** Initial condition
 #= the initial logic is the following:
@@ -63,20 +66,58 @@ end
 
 function sample_parties_pos(nparties, model)
     ids = collect(abm.allids(model))
+
     partiesposs = Dict(map(x-> (x,model[x].pos),
-                      sample(ids,nparties, replace = false)))
-    return(partiesposs)
+                           sample(ids,nparties, replace = false)))
+    actualpartiesposs = Dict(
+        Pair(k,
+             Dict(:partyposition => v,
+                  :partycandidate => -1 ))
+        for (k,v) in partiesposs)
+    return(actualpartiesposs)
 end
 
 
-function set_candidates!(partiesposs,model::abm.ABM, δ = 0.1)
+# BUG: fuck this is bugged aaaaaaaaaaaaa
+function set_candidates!(partiesposs,
+                         model::abm.ABM,
+                         δ = 0.3)
 
-    candidateids = Dict(Pair(pid, sample(collect(abm.nearby_ids(pvalue,model,δ, exact = true)))) for (pid,pvalue) in partiesposs)
+    getcandidateid(partypos)= sample(collect(
+        abm.nearby_ids(partypos,
+                       model,
+                       δ,
+                       exact = true)))
+
+    candidatepartypairs = []
+
+    for (pid,pvalue) in partiesposs
+        # this allows me use it in the initial condition without any problem
+        if model.properties[:incumbent] == 0
+            println(pid, " ",getcandidateid(pvalue[:partyposition]))
+            push!(candidatepartypairs,
+                  Pair(pid,getcandidateid(pvalue[:partyposition])))
+        # this one helps me to jump the incumbent after the initial condition
+        elseif pid == model[model.properties[:incumbent]].myPartyId
+                continue
+        else
+            println(pid, " ",getcandidateid(pvalue[:partyposition]))
+            push!(candidatepartypairs,
+                  Pair(pid,getcandidateid(pvalue[:partyposition])))
+        end
+    end
+
+    candidateids =  Dict(candidatepartypairs)
+    #println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
 
     for (pid,candidateid) in candidateids
+
         model[candidateid].amIaCandidate = true
         model[candidateid].myPartyId = pid
-        end
+        partiesposs[pid][:partycandidate] = candidateid
+    end
+
+
 end
 
 
@@ -89,7 +130,7 @@ end
 
 
 "get_closest_candidate(agentid::Int, model::abm.ABM, mypos_or_partypos::Symbol)"
-function get_closest_candidate(agentid::Int,model, mypos_or_partypos = :pos)
+function get_closest_candidate(agentid::Int,model)
     #=
     In this function the optional argument must the field of position that the function must calculate! Either the agents' position or its partyid position!
     =#
@@ -101,20 +142,20 @@ function get_closest_candidate(agentid::Int,model, mypos_or_partypos = :pos)
     if any mistake has happened here.
     =#
     dummydistance = 100.
-    dummyid = -2
+    candidateid, itspartyid = -1,-1
+
     for i in abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
         if model[i].amIaCandidate
-            candidatepos = getfield(model[agentid],
-                                     mypos_or_partypos)
-            distance = dist.euclidean(candidatepos,
-                                      model[i].pos)
+            candidatepos = model[i].pos
+             distance = dist.euclidean(candidatepos,
+                                      model[agentid].pos)
             if distance < dummydistance
                 dummydistance = distance
-                dummyid = i
+                candidateid, itspartyid = model[i].id, model[i].myPartyId
             end
         end
     end
-    return(dummyid)
+    return(candidateid,itspartyid)
 end
 
 "getmostvoted(model::abm.ABM)"
@@ -125,14 +166,14 @@ function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
     if initial_or_iteration == :initial
         votingfn = get_closest_candidate
     else
-        votingfn = get_whoAgentVotesfor
+        votingfn = get_whichCandidatePartyAgentVotesfor
     end
 
     #=The candidate who is closest to most wins.
     Standard downsian assumption.=#
     closest_candidates = Array{Int}(undef, abm.nagents(model))
     for id in abm.allids(model)
-        closest_candidates[id] = votingfn(id,model)
+        closest_candidates[id] = votingfn(id,model)[1]
     end
    return(argmax(proportionmap(closest_candidates))) # argmax will return only one maximal, beware of that!
 end
@@ -140,23 +181,21 @@ end
 
 # TODO: Check if this is indeed correct
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
-function initialize_model(nagents::Int, nissues::Int, nparties,
+function initialize_model(nagents::Int, nissues::Int, nparties;
                           κ = 0.1, ρ = 0.2, ϕ = 0.2, δ=0.1)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
 
-    postype = typeof(ntuple(x -> 1.,nissues))
+    # postype = typeof(ntuple(x -> 1.,nissues))
 
     #=
     There are three main auxiliary model collections:
-    - What are the parties ids and their positions!
-    - What are the voters parties ids NOW
-    - What are the the voters voting track
+    - What are the parties ids, and their positions and candidates (partiesposs)
+    - What are the voters parties ids NOW (voters_partyids)
+    - What are the the voters voting track (votersBallotTracker)
     =#
-
-
     voters_partyids = Dict{Int64, Int64}()
     voterBallotTracker = Dict{Int64, Vector{Int}}()
-    partiesposs = Dict{Int64, postype}()
+    partiesposs = Dict{}()
     #=
     I am adding that as a model property to later:
     1) use it for synchronous partyid update
@@ -165,6 +204,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties,
     properties = Dict(:incumbent => 0,
                       :nagents => nagents,
                       :nissues => nissues,
+                      :ncandidates => nparties,
                       :partiesposs => partiesposs,
                       :δ => δ,
                       :κ => κ,
@@ -172,24 +212,20 @@ function initialize_model(nagents::Int, nissues::Int, nparties,
                       :ϕ => ϕ,
                       :voters_partyids => voters_partyids,
                       :voterBallotTracker=>voterBallotTracker)
-
     model = abm.ABM(Voter{nissues}, space, properties = properties)
 
     for i in 1:nagents
         vi = Voter(i, nissues)
-        abm.add_agent_pos!(vi, model)
-    end
-
+                       abm.add_agent_pos!(vi, model)
+                       end
     model.properties[:partiesposs] = sample_parties_pos(nparties,
                                                         model)
     set_candidates!(model)
+
     new_incumbent = getmostvoted(model)
 
     for i in abm.allids(model)
-        mypartyid = begin
-            closest_candidate_id = get_closest_candidate(i,model)
-            model[closest_candidate_id].myPartyId
-        end
+        mypartyid = get_closest_candidate(i,model)[2]
         model[i].myPartyId = mypartyid
     end
 
@@ -208,9 +244,7 @@ there is some sublety here.
 agente ele quer saber quem ele ta mais proximo em termos de posicao DELE MAS
 tambem quem que ta mais proximo da partyid dele entao ele considera dois
 candidatos se o candidato mais proximo dele 'e tipo muito mais proximo que o
-candidato do partido, uma contante kappa, ele vota no outro maas, ao faze-lo sua
-partyid passa a ser a media da posicao desse novo candidato com a partyid
-anterior
+candidato do partido, uma contante kappa, ele vota no outro
 =#
 "reset_candidates!(model::abm.ABM)"
 function reset_candidates!(model::abm.ABM)
@@ -220,25 +254,27 @@ function reset_candidates!(model::abm.ABM)
     model[model.properties[:incumbent]].amIaCandidate = true
 end
 
+
 "candidates_iteration_setup!(model::abm.ABM)"
 function candidates_iteration_setup!(m::abm.ABM)
     reset_candidates!(m)
-    set_candidates!(m.properties[:ncandidates]-1, m)
+    set_candidates!( m)
 end
 
-"get_whoAgentVotesfor(agentid, model)"
-function get_whoAgentVotesfor(agentid, model)
-    κ = model.properties[:κ]
-    closest_to_me = get_closest_candidate(agentid,model)
-    closest_to_myPartyId = get_closest_candidate(agentid,
-                                                 model,
-                                                 :myPartyId)
-    whoillvotefor = closest_to_myPartyId
-    two_candidates_distance = dist.euclidean(model[closest_to_me].pos,
-                                             model[closest_to_myPartyId].pos)
 
+function get_whichCandidatePartyAgentVotesfor(agentid, model)
+    κ = model.properties[:κ]
+
+    closest_to_me_id_pid = get_closest_candidate(agentid,model)
+
+    mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
+
+    whoillvotefor = (model[agentid].myPartyId, mypartycandidate)
+
+    two_candidates_distance = dist.euclidean(model[closest_to_me_id_pid[1]].pos,
+                                             model[mypartycandidate].pos)
     if two_candidates_distance > κ
-        whoillvotefor = closest_to_me
+        whoillvotefor = closest_to_me_id_pid
     end
 
     return(whoillvotefor)
@@ -246,36 +282,15 @@ function get_whoAgentVotesfor(agentid, model)
 end
 
 
+#=
+1. Pick the proportion of iterations that I voted for the party I’m voting
+for in this iteration.
+2. Pick the proportion of people from my party that voted
+different from me;
+- I change my party id to this other party with a probability equal to tanh(proportion 1 + proportion 2). =#
+
 function update_partyid!(agentid,model)
-    # let modelsize = 1000
-    whoIllVote_now = get_whoAgentVotesfor(agentid, model) #this guy allocates  17 times!
-    model[agentid].myPartyId .= broadcast((x,y) -> mean([x,y]), model[agentid].myPartyId,
-                                                        model[whoIllVote_now].pos) # this guy allocates 3 times!
-    model.properties[:partyids][agentid] = model[agentid].myPartyId
-end
 
-
-"function get_mean_neighborhoodPid(agentid,model, ρ)
-This is a helper for updatePid_neighbors_influence!"
-function get_mean_neighborhoodPid(agentid,model, ρ)
-    neighbors = abm.nearby_ids(model[agentid].pos, model, ρ )
-    #mean_neighbor_Pid = MVector{n}(ntuple(x-> 0., n)), do this later
-    StatsBase.mean(map(x->model.properties[:partyids][x], neighbors))
-    #= Notice that I'm looking at the dictionary!
-    With that I can mutate synchronously the voters myPartyIds.
-    After I mutate all of them I gotta udpate the model.properties[:partyids]=#
-    #= FIXME: This map allocates a lot. Later I'll fix that by rolling my mean loop =#
-end
-
-
-
-function updatePid_neighbors_influence!(agentid,model, ρ, ϕ)
-    if rand() < ϕ
-        neighborsmean = get_mean_neighborhoodPid(agentid,model, ρ)
-        model[agentid].myPartyId .= broadcast((x,y) -> mean([x,y]),
-                                              model[agentid].myPartyId,
-                                              neighborsmean)
-    end
 end
 
 
