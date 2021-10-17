@@ -53,7 +53,7 @@ const bounds = (0,1)
     κ = 0.1 # this influences whether I'll vote against my party or not
     ρ = 0.2 # this is the radius of neighbors I take a look. I believe it can be dropped
     ϕ = 0.2 # this is related to neighbors influence (I Think it can be dropped)
-    δ = 0.1 # this influences the radius of candidates a party samples from
+    δ = 0.2 # this influences the radius of candidates a party samples from
 end
 
 
@@ -77,14 +77,27 @@ function sample_parties_pos(nparties, model)
     return(actualpartiesposs)
 end
 
+# function sample_parties_pos(nparties, model)
+#     ids = collect(abm.allids(model))
+
+#     partiesposs = Dict(map(x-> (x,model[x].pos),
+#                            sample(ids,nparties, replace = false)))
+#     actualpartiesposs = Dict(
+#         Pair(k,
+#              Dict(:partyposition => v,
+#                   :partycandidate => -1 ))
+#         for (k,v) in partiesposs)
+#     return(actualpartiesposs)
+# end
+
+
 
 # BUG: fuck this is bugged aaaaaaaaaaaaa
 function set_candidates!(partiesposs,
-                         model::abm.ABM,
-                         δ = 0.3)
-
-    getcandidateid(partypos)= sample(collect(
-        abm.nearby_ids(partypos,
+                         model::abm.ABM)
+    δ = model.properties[:δ]
+    getcandidateid(party)= sample(collect(
+        abm.nearby_ids(party,
                        model,
                        δ,
                        exact = true)))
@@ -94,21 +107,21 @@ function set_candidates!(partiesposs,
     for (pid,pvalue) in partiesposs
         # this allows me use it in the initial condition without any problem
         if model.properties[:incumbent] == 0
-            println(getcandidateid(pvalue[:partyposition]),  " ", pid)
+            #println(getcandidateid(pvalue[:partyposition]),  " ", pid)
             push!(candidatepartypairs,
                   Pair(getcandidateid(pvalue[:partyposition]),pid))
         # this one helps me to jump the incumbent after the initial condition
         elseif pid == model[model.properties[:incumbent]].myPartyId
                 continue
         else
-            println(getcandidateid(pvalue[:partyposition]), " ", pid)
+            #println(getcandidateid(pvalue[:partyposition]), " ", pid)
             push!(candidatepartypairs,
                   Pair(getcandidateid(pvalue[:partyposition]), pid))
         end
     end
 
     candidateids =  Dict(candidatepartypairs)
-    #println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
+    println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
 
     for (candidateid, pid) in candidateids
 
@@ -123,8 +136,7 @@ end
 
 function set_candidates!(model::abm.ABM)
     set_candidates!(model.properties[:partiesposs],
-                    model::abm.ABM,
-                    model.properties[:δ])
+                    model::abm.ABM)
 end
 
 
