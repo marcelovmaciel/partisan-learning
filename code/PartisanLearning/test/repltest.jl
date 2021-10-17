@@ -91,7 +91,9 @@ ncandidates = 10
 nissues = 5
 
 # BUG: run this line below and see the bug
-m = pla.initialize_model(1000,nissues, ncandidates, κ = 0.00001, δ=0.2)
+m = pla.initialize_model(1000,nissues,
+                         ncandidates,
+                         κ = 0.00001, δ=0.2)
 m.properties[:incumbent]
 
 pla.candidates_iteration_setup!(m)
