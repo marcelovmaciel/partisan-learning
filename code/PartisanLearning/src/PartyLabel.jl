@@ -347,7 +347,8 @@ function update_partyid!(agentid,model)
     end
 end
 
-
+#FIXME: Double-check if I update the model.properties[:partiesposs][:partycandidate]!!!
+# I believe it does update with set_candidates! though. Nevertheless, check
 function model_step!(model)
     candidates_iteration_setup!(model)
 
