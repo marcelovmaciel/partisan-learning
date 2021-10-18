@@ -340,7 +340,7 @@ different from me;
 function update_partyid!(agentid,model)
     myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
     proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
-    proportion_peersUnlikeMe = get_proportion_peers_voteLikeMe(agentid,model)
+    proportion_peersUnlikeMe = (1-get_proportion_peers_voteLikeMe(agentid,model))
     changechange = tanh(proportion_IvotedForThisParty + proportion_peersUnlikeMe)
     if rand() < changechange
         model[agentid].myPartyId = myLast_PartyVote
