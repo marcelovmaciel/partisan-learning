@@ -87,47 +87,6 @@ end
 
 # * PartyidModel
 
-ncandidates = 10
-nissues = 5
-
-# BUG: run this line below and see the bug
-m = pla.initialize_model(1000,nissues,
-                         ncandidates,
-                         κ = 0.00001, δ=0.2)
-m.properties[:incumbent]
-
-pla.candidates_iteration_setup!(m)
-
-m.properties[:incumbent] # BUG: this shows that candidates_iteration_setup! is not keeping the incumbent lol
-
-sample(collect(nearby_ids(m[208],
-                       m,
-                       0.3,
-                       exact = true)))
-
-m.properties[:partiesposs][208]
-
-for (k,v) in m.properties[:partiesposs]
-println(k, " ", v[:partycandidate])
-end
-
-
-m.properties[:voterBallotTracker]
-
-m.properties
-
-
-
-for i in allids(m)
-    println(pla.get_closest_candidate(i,m))
-end
-
-
-for k in keys(m.properties[:partiesposs])
-    println(k, " ", m.properties[:partiesposs][k][:partycandidate] )
-end
-
-
 
 
 m.properties[:partyids]
@@ -329,6 +288,63 @@ on
 
 
 # * PartyLabelModel
+ncandidates = 10
+nissues = 5
+
+# BUG: run the δ thing might be leading to a bug!
+m = pla.initialize_model(1000,nissues,
+                         ncandidates)
+m.properties[:incumbent]
+
+pla.candidates_iteration_setup!(m)
+
+m.properties[:partiesposs]
+
+
+proportion_peers_voteLikeMe2(1,m)
+
+withinpartyshares[m.properties[:voters_partyids][1]]
+
+
+
+m.properties[:voterBallotTracker]
+
+filter((t->t[2]==810),collect(m.properties[:voters_partyids]))
+
+collect(m.properties[:voters_partyids])
+
+m.properties[:voters_partyids]
+
+
+
+
+sample(collect(nearby_ids(m[208],
+                       m,
+                       0.3,
+                       exact = true)))
+
+m.properties[:partiesposs][208]
+
+for (k,v) in m.properties[:partiesposs]
+println(k, " ", v[:partycandidate])
+end
+
+
+m.properties[:voterBallotTracker]
+
+m.properties
+
+
+
+for i in allids(m)
+    println(pla.get_closest_candidate(i,m))
+end
+
+
+for k in keys(m.properties[:partiesposs])
+    println(k, " ", m.properties[:partiesposs][k][:partycandidate] )
+end
+
 
 # * Test this
 using Agents

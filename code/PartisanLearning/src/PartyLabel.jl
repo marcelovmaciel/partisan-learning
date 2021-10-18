@@ -51,8 +51,6 @@ const bounds = (0,1)
     nissues = 1
     bounds = bounds
     κ = 0.1 # this influences whether I'll vote against my party or not
-    ρ = 0.2 # this is the radius of neighbors I take a look. I believe it can be dropped
-    ϕ = 0.2 # this is related to neighbors influence (I Think it can be dropped)
     δ = 0.2 # this influences the radius of candidates a party samples from
 end
 
@@ -90,8 +88,6 @@ end
 #     return(actualpartiesposs)
 # end
 
-
-
 # BUG: fuck this is bugged aaaaaaaaaaaaa
 function set_candidates!(partiesposs,
                          model::abm.ABM)
@@ -121,7 +117,7 @@ function set_candidates!(partiesposs,
     end
 
     candidateids =  Dict(candidatepartypairs)
-    println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
+    # println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
 
     for (candidateid, pid) in candidateids
 
@@ -190,11 +186,34 @@ function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
    return(argmax(proportionmap(closest_candidates))) # argmax will return only one maximal, beware of that!
 end
 
+function get_parties_supporters(model)
+    Dict(
+        Pair(k,
+             collect(keys(filter(t->t[2]==k,
+                    model.properties[:voters_partyids]))))
+        for k in keys(model.properties[:partiesposs]))
+end
+
+function get_withinpartyshares(model)
+    #= This function is very important and calculates the proportion
+    of vote shares WITHIN the parties. That is, to what party
+    the supporters of each party have voted for.
+    Naturally, it **ONLY MAKES SENSE** if I update
+    model.properties[:voterBallotTracker] before using it!!!!=#
+    parties_supporters = get_parties_supporters(model)
+    withinpartyvotes = Dict(
+        Pair(k,
+             map(x-> model.properties[:voterBallotTracker][x][end],v))
+        for (k,v) in parties_supporters)
+   Dict(Pair(k,proportionmap(v)) for (k,v) in withinpartyvotes)
+end
+
+
 
 # TODO: Check if this is indeed correct
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
 function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 0.1, ρ = 0.2, ϕ = 0.2, δ=0.1)
+                          κ = 0.1,  δ=0.4)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
 
     # postype = typeof(ntuple(x -> 1.,nissues))
@@ -208,6 +227,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     voters_partyids = Dict{Int64, Int64}()
     voterBallotTracker = Dict{Int64, Vector{Int}}()
     partiesposs = Dict{}()
+    withinpartyshares = Dict{}()
     #=
     I am adding that as a model property to later:
     1) use it for synchronous partyid update
@@ -220,10 +240,9 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :partiesposs => partiesposs,
                       :δ => δ,
                       :κ => κ,
-                      :ρ => ρ,
-                      :ϕ => ϕ,
                       :voters_partyids => voters_partyids,
-                      :voterBallotTracker=>voterBallotTracker)
+                      :voterBallotTracker=>voterBallotTracker,
+                      :withinpartyshares => withinpartyshares)
     model = abm.ABM(Voter{nissues}, space, properties = properties)
 
     for i in 1:nagents
@@ -245,6 +264,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     model.properties[:voters_partyids] = Dict((model[x].id => model[x].myPartyId)
                                        for x in abm.allids(model))
     model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:voters_partyids])
+    model.properties[:within_partyshares] = get_withinpartyshares(model)
     return(model)
 end
 
@@ -281,7 +301,7 @@ function get_whichCandidatePartyAgentVotesfor(agentid, model)
 
     mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
 
-    whoillvotefor = (model[agentid].myPartyId, mypartycandidate)
+    whoillvotefor = (mypartycandidate, model[agentid].myPartyId)
 
     two_candidates_distance = dist.euclidean(model[closest_to_me_id_pid[1]].pos,
                                              model[mypartycandidate].pos)
@@ -294,6 +314,22 @@ function get_whichCandidatePartyAgentVotesfor(agentid, model)
 end
 
 
+function get_proportion_peers_voteLikeMe(agentid,model)
+    # This function only makes sense after updating m.properties[:voterBallotTracker]
+    # and then updating the model.properties[:withinpartyshares]
+    shares = model.properties[:withinpartyshares]
+    partyImVotingFor = get_whichCandidatePartyAgentVotesfor(agentid,model)[2]
+    if !(partyImVotingFor in
+         keys(shares[model[agentid].myPartyId]))
+        proportion = 0.0
+    else
+        proportion = shares[model[agentid].myPartyId][partyImVotingFor]
+    end
+    return(proportion)
+end
+
+
+
 #=
 1. Pick the proportion of iterations that I voted for the party I’m voting
 for in this iteration.
@@ -302,7 +338,13 @@ different from me;
 - I change my party id to this other party with a probability equal to tanh(proportion 1 + proportion 2). =#
 
 function update_partyid!(agentid,model)
-
+    myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
+    proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
+    proportion_peersUnlikeMe = get_proportion_peers_voteLikeMe(agentid,model)
+    changechange = tanh(proportion_IvotedForThisParty + proportion_peersUnlikeMe)
+    if rand() < changechange
+        model[agentid].myPartyId = myLast_PartyVote
+    end
 end
 
 
@@ -312,25 +354,20 @@ function model_step!(model)
     new_winner = getmostvoted(model, :iteration)
 
     model.properties[:incumbent]= new_winner
+    for i in abm.allids(model)
+        party_i_votedfor = get_whichCandidatePartyAgentVotesfor(i,model)[2]
+        push!(model.properties[:voterBallotTracker][i], party_i_votedfor )
+    end
+    model.properties[:withinpartyshares] = get_withinpartyshares(model)
 
     #=In this loop agents deal with their new choice
     #of candidate by updating their partyid =#
     for i in abm.allids(model)
         update_partyid!(i,model)
+        model.properties[:voters_partyids][i] = model[i].myPartyId
     end
-
-    # In this loop agents deal with their neighbors' udpates
-    for i in abm.allids(model)
-        updatePid_neighbors_influence!(i,model,
-                                       model.properties[:ρ],
-                                       model.properties[:ϕ])
-    end
-
-    for i in abm.allids(model)
-        model.properties[:partyids][i] = model[i].myPartyId
-    end
-
 end
+
 
 # ** Data Collection
 
