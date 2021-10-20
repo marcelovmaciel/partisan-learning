@@ -89,11 +89,90 @@ end
 # end
 
 # BUG: fuck this is bugged aaaaaaaaaaaaa
+
+# function mynearby_ids(
+#     pos::abm.ValidPos,
+#     model::abm.ABM{<:abm.ContinuousSpace{D,A,T}},
+#     r = 1;
+#     exact = false,
+# ) where {D,A,T}
+#     if exact
+#         grid_r_max = r < model.space.spacing ? T(1) : r / model.space.spacing + T(1)
+#         grid_r_certain = grid_r_max - T(1.2) * sqrt(D)
+#         focal_cell = CartesianIndex(abm.pos2cell(pos, model))
+#         allcells = abm.grid_space_neighborhood(focal_cell, model, grid_r_max)
+#         if grid_r_max >= 1
+#             certain_cells = abm.grid_space_neighborhood(focal_cell, model, grid_r_certain)
+#             certain_ids =
+#                 abm.Iterators.flatten(abm.ids_in_position(cell, model) for cell in certain_cells)
+
+#             uncertain_cells = setdiff(allcells, certain_cells) # This allocates, but not sure if there's a better way.
+#             uncertain_ids =
+#                 abm.Iterators.flatten(abm.ids_in_position(cell, model) for cell in uncertain_cells)
+
+#             additional_ids = abm.Iterators.filter(
+#                 i -> dist.euclidean(pos, model[i].pos) ≤ r,
+#                 uncertain_ids,
+#             )
+
+#             return abm.Iterators.flatten((certain_ids, additional_ids))
+#         else
+#             all_ids = abm.Iterators.flatten(abm.ids_in_position(cell, model) for cell in allcells)
+#             return abm.Iterators.filter(i -> dist.euclidean(pos, model[i].pos) ≤ r, all_ids)
+#         end
+#     else
+#         foo = abm.distance_from_cell_center(pos, abm.cell_center(pos, model))
+#         grid_r = (r + foo) / model.space.spacing
+#         return abm.nearby_ids_cell(pos, model, grid_r)
+#     end
+# end
+
+# function set_candidates!(partiesposs,
+#                          model::abm.ABM)
+#     δ = model.properties[:δ]
+#     getcandidateid(party)= sample(collect(
+#         mynearby_ids(party,
+#                        model,
+#                        δ,
+#                        exact = true)))
+
+#     candidatepartypairs = []
+
+#     for (pid,pvalue) in partiesposs
+#         # this allows me use it in the initial condition without any problem
+#         if model.properties[:incumbent] == 0
+#             #println(getcandidateid(pvalue[:partyposition]),  " ", pid)
+#             push!(candidatepartypairs,
+#                   Pair(getcandidateid(pvalue[:partyposition]),pid))
+#         # this one helps me to jump the incumbent after the initial condition
+#         elseif pid == model[model.properties[:incumbent]].myPartyId
+#                 continue
+#         else
+#             #println(getcandidateid(pvalue[:partyposition]), " ", pid)
+#             push!(candidatepartypairs,
+#                   Pair((pvalue[:partyposition]),
+#                        pid))
+#         end
+#     end
+
+#     candidateids =  Dict(candidatepartypairs)
+#     # println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
+
+#     for (candidateid, pid) in candidateids
+
+#         model[candidateid].amIaCandidate = true
+#         model[candidateid].myPartyId = pid
+#         partiesposs[pid][:partycandidate] = candidateid
+#     end
+
+
+# end
+
 function set_candidates!(partiesposs,
                          model::abm.ABM)
     δ = model.properties[:δ]
     getcandidateid(party)= sample(collect(
-        abm.nearby_ids(party,
+        abm.nearby_ids(model[party],
                        model,
                        δ,
                        exact = true)))
@@ -105,14 +184,15 @@ function set_candidates!(partiesposs,
         if model.properties[:incumbent] == 0
             #println(getcandidateid(pvalue[:partyposition]),  " ", pid)
             push!(candidatepartypairs,
-                  Pair(getcandidateid(pvalue[:partyposition]),pid))
+                  Pair(getcandidateid(pid),pid))
         # this one helps me to jump the incumbent after the initial condition
         elseif pid == model[model.properties[:incumbent]].myPartyId
                 continue
         else
             #println(getcandidateid(pvalue[:partyposition]), " ", pid)
             push!(candidatepartypairs,
-                  Pair(getcandidateid(pvalue[:partyposition]), pid))
+                  Pair(getcandidateid(pid),
+                       pid))
         end
     end
 
@@ -130,6 +210,7 @@ function set_candidates!(partiesposs,
 end
 
 
+
 function set_candidates!(model::abm.ABM)
     set_candidates!(model.properties[:partiesposs],
                     model::abm.ABM)
@@ -137,7 +218,7 @@ end
 
 
 
-"get_closest_candidate(agentid::Int, model::abm.ABM, mypos_or_partypos::Symbol)"
+"get_closest_candidate(agentid::Int, model::abm.ABM)"
 function get_closest_candidate(agentid::Int,model)
     #=
     In this function the optional argument must the field of position that the function must calculate! Either the agents' position or its partyid position!
@@ -380,10 +461,9 @@ FIXME: Test what happens with the  proportion of voters who voted against PartyI
 =#
 
 function HaveIVotedAgainstMyParty(agentid::Int, model)
-    closest_to_myPartyId = get_closest_candidate(agentid,
-                                                 model,
-                                                 :myPartyId)
-    return(get_whoAgentVotesfor(agentid, model) != closest_to_myPartyId)
+    mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
+    mycandidate = get_whichCandidatePartyAgentVotesfor(agentid, model)[1]
+    return(mycandidate != mypartycandidate)
 end
 
 HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
@@ -393,14 +473,14 @@ mdata = [:incumbent]
 
 
 function get_distance_IvsParty(agentid, model)
-    κ = model.properties[:κ]
-    closest_to_me = get_closest_candidate(agentid,model)
-    closest_to_myPartyId = get_closest_candidate(agentid,
-                                                 model,
-                                                 :myPartyId)
-    whoillvotefor = closest_to_myPartyId
+
+
+    closest_to_me = get_closest_candidate(agentid,model)[1]
+    mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
+
+
     two_candidates_distance = dist.euclidean(model[closest_to_me].pos,
-                                             model[closest_to_myPartyId].pos)
+                                             model[mypartycandidate].pos)
     return(two_candidates_distance)
 
 end

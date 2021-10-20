@@ -10,6 +10,7 @@ const pla = pl.PartyLabel
 using InteractiveDynamics
 using GLMakie
 using Agents
+import Distances
 # * Issue Salience Model
 fooparams = is.IssueSalience.ModelParams()
 
@@ -290,16 +291,35 @@ on
 # * PartyLabelModel
 ncandidates = 10
 nissues = 5
+δ = 0.1
+# **  BUG: run the δ thing might be leading to a bug!
 
-# BUG: run the δ thing might be leading to a bug!
 m = pla.initialize_model(1000,nissues,
-                         ncandidates)
+                         ncandidates, δ = 1
+                         )
+pla.model_step!(m)
+
 m.properties[:incumbent]
 
+
+
+maximum([Distances.euclidean(m[k].pos,
+                     m[m.properties[:partiesposs][k][:partycandidate]].pos)
+     for k in keys(m.properties[:partiesposs])])
+
+# ** Other tests
+
+ncandidates = 10
+nissues = 5
+δ = 0.1
+
+m = pla.initialize_model(1000,nissues,
+                         ncandidates, δ = 1)
+
+pla.model_step!(m)
+
+
 pla.candidates_iteration_setup!(m)
-
-m.properties[:partiesposs]
-
 
 proportion_peers_voteLikeMe2(1,m)
 
