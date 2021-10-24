@@ -338,12 +338,12 @@ collect(m.properties[:voters_partyids])
 m.properties[:voters_partyids]
 
 # *** Test plotting
-ncandidates = 10
+ncandidates = 5
 nissues = 2
 
 
 m = pla.initialize_model(1000,nissues,
-                         ncandidates, δ = 1, κ=0.4)
+                         ncandidates, δ = 1, κ=0.8)
 
 
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")

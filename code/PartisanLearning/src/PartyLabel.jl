@@ -168,6 +168,7 @@ end
 
 # end
 
+
 function set_candidates!(partiesposs,
                          model::abm.ABM)
     δ = model.properties[:δ]
@@ -205,8 +206,6 @@ function set_candidates!(partiesposs,
         model[candidateid].myPartyId = pid
         partiesposs[pid][:partycandidate] = candidateid
     end
-
-
 end
 
 
