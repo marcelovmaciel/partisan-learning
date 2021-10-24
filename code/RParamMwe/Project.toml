@@ -1,0 +1,9 @@
+name = "RParamMwe"
+uuid = "5944cabb-332d-481f-8249-e5ebe2134332"
+authors = ["marcelovmaciel <marcelovmaciel@protonmail.com>"]
+version = "0.1.0"
+
+[deps]
+Agents = "46ada45e-f475-11e8-01d0-f70cc89e6671"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
