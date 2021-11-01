@@ -342,7 +342,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     model.properties[:voters_partyids] = Dict((model[x].id => model[x].myPartyId)
                                        for x in abm.allids(model))
     model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:voters_partyids])
-    model.properties[:within_partyshares] = get_withinpartyshares(model)
+    model.properties[:withinpartyshares] = get_withinpartyshares(model)
     return(model)
 end
 
@@ -474,15 +474,13 @@ end
 HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
 
 #adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
-mdata = [:incumbent]
+mdata = [x->x[x.properties[:incumbent]].myPartyId]
 
 function get_distance_IvsParty(agentid, model)
 
 
     closest_to_me = get_closest_candidate(agentid,model)[1]
     mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
-
-
     two_candidates_distance = dist.euclidean(model[closest_to_me].pos,
                                              model[mypartycandidate].pos)
     return(two_candidates_distance)
@@ -491,7 +489,12 @@ end
 
 get_distance_IvsParty(agent::Voter, model) = get_distance_IvsParty(agent.id, model)
 
-# TODO add data collection: incumbent eccentricity! maybe also a mean non-incumbent eccentricity
 
+# TODO add data collection: incumbent eccentricity! maybe also a mean non-incumbent eccentricity
+# TODO: do a static preplot of parties positions!
+# TODO: try to visualize how myPartyId evolves!
+# TODO: withipartyshares could be an evolving barplot
+# TODO: I'm missing the general party shares info!
+# TODO: write my own fucking visualization loop
 
 end  # this is where the module ends!!!

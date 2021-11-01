@@ -289,8 +289,8 @@ on
 
 
 # * PartyLabelModel
-ncandidates = 10
-nissues = 5
+ncandidates = 4
+nissues = 2
 
 
 # **  BUG: run the δ thing might be leading to a bug!
@@ -299,11 +299,10 @@ m = pla.initialize_model(1000,nissues,
                          ncandidates, δ = 3.)
 pla.model_step!(m)
 
-
-
 # ** Try to analyze
-params = Dict(:κ => 0.0:1.:10.,
-              :δ => 3.:1.:10)
+
+params = Dict(:κ => 0.0:1.:20.,
+              :δ => 3.:1.:20.)
 
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
@@ -315,22 +314,22 @@ agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 :
 # higher δ means parties sample further from their location.
 # both depended upon the underlying boundaries! think about that !!!
 
+adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+         (a->(pla.get_distance_IvsParty(a,m)), pla.StatsBase.mean),
+         (:myPartyId, pla.StatsBase.mode)] # FIXME: This last aggregator doesnt tell much
 
-adata = [(a->(pid.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-         (a->(pid.get_distance_IvsParty(a,m)), pid.StatsBase.mean)]
+alabels = ["Against PartyId", "dist(closest,party's)", "Mode-partyid"]
+mlabels = ["Incumbent"]
 
-alabels = ["Voted Against PartyId", "dist(closest,party's)"]
 
 fig,adf,mdf = abm_data_exploration(m,
-                                   pid.abm.dummystep,
-                                   pid.model_step!,
+                                   pla.abm.dummystep,
+                                   pla.model_step!,
                                    params;
-                                   adata, pid.mdata,
-                                   alabels,
+                                   adata, pla.mdata,
+                                   alabels,mlabels,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1)
-
-
 
 maximum([Distances.euclidean(m[k].pos,
                      m[m.properties[:partiesposs][k][:partycandidate]].pos)
