@@ -11,6 +11,7 @@ using InteractiveDynamics
 using GLMakie
 using Agents
 import Distances
+
 # * Issue Salience Model
 fooparams = is.IssueSalience.ModelParams()
 
@@ -32,7 +33,6 @@ pl.abm_play(
     ac = agent_colors,
     as = agent_size
 )
-
 
 # * Unorganized code
 
@@ -291,15 +291,44 @@ on
 # * PartyLabelModel
 ncandidates = 10
 nissues = 5
-δ = 0.1
+
+
 # **  BUG: run the δ thing might be leading to a bug!
 
 m = pla.initialize_model(1000,nissues,
-                         ncandidates, δ = 1
-                         )
+                         ncandidates, δ = 3.)
 pla.model_step!(m)
 
-m.properties[:incumbent]
+
+
+# ** Try to analyze
+params = Dict(:κ => 0.0:1.:10.,
+              :δ => 3.:1.:10)
+
+agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
+agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
+
+
+#higher kappa means agents will tend to vote more for
+#their partyid. Conversely, lower kappa means people vote more
+# for candidates closer to then rather than closer to their party
+# higher δ means parties sample further from their location.
+# both depended upon the underlying boundaries! think about that !!!
+
+
+adata = [(a->(pid.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+         (a->(pid.get_distance_IvsParty(a,m)), pid.StatsBase.mean)]
+
+alabels = ["Voted Against PartyId", "dist(closest,party's)"]
+
+fig,adf,mdf = abm_data_exploration(m,
+                                   pid.abm.dummystep,
+                                   pid.model_step!,
+                                   params;
+                                   adata, pid.mdata,
+                                   alabels,
+                                   ac = agent_colors,
+                                   as = agent_size, spu = 1)
 
 
 

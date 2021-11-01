@@ -43,15 +43,15 @@ agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
 throughout simulation inspection =#
 end
 
-const bounds = (0,1)
+const bounds = (0,10)
 
 @kwdef struct ModelParams
     nagents = 3000
     ncandidates = 10
     nissues = 1
     bounds = bounds
-    κ = 0.1 # this influences whether I'll vote against my party or not
-    δ = 0.2 # this influences the radius of candidates a party samples from
+    κ = 1. # this influences whether I'll vote against my party or not
+    δ = 3. # this influences the radius of candidates a party samples from
 end
 
 
@@ -229,7 +229,7 @@ function get_closest_candidate(agentid::Int,model)
     there can be no such thing. Thus, it will warn me downstream
     if any mistake has happened here.
     =#
-    dummydistance = 100.
+    dummydistance = 100000.
     candidateid, itspartyid = -1,-1
 
     for i in abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)
@@ -288,12 +288,10 @@ function get_withinpartyshares(model)
    Dict(Pair(k,proportionmap(v)) for (k,v) in withinpartyvotes)
 end
 
-
-
 # TODO: Check if this is indeed correct
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
 function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 0.1,  δ=0.4)
+                          κ = 2.,  δ=1.)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
 
     # postype = typeof(ntuple(x -> 1.,nissues))
@@ -455,9 +453,16 @@ end
 #=
 
 FIXME: Test what happens with the  proportion of voters who voted against PartyId candidate
-# Maybe also some measures of the distribution? Who knows....
 
+Maybe also some measures of the distribution? Who knows....
+
+• for how long candidate remains winning.
+• The proportion of voters voted for someone who was not their party
+candidate.
+• What is the distance between the candidate the agent voted for and
+the candidate of their party.
 =#
+
 
 function HaveIVotedAgainstMyParty(agentid::Int, model)
     mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
@@ -465,11 +470,11 @@ function HaveIVotedAgainstMyParty(agentid::Int, model)
     return(mycandidate != mypartycandidate)
 end
 
+
 HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
 
 #adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
 mdata = [:incumbent]
-
 
 function get_distance_IvsParty(agentid, model)
 

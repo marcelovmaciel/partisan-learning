@@ -37,14 +37,14 @@ end
 
 
 function model_initialize(nagents,n, ncs,  r = 1)
-    space = ContinuousSpace(ntuple(x -> float(1),n))
+    space = ContinuousSpace(ntuple(x -> float(10),n))
 
     model = ABM(DummyAgent{n}, space, properties = Dict(:n=> n,
                                                         :r => r,
                                                         :pointsdict => Dict{}()))
 
         for i in 1:nagents
-        pos = Tuple(rand(Uniform(0,1), n))
+        pos = Tuple(rand(Uniform(0,10), n))
                 add_agent_pos!(DummyAgent{n}(i, pos), model)
                 end
 
