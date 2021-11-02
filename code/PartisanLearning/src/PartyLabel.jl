@@ -168,7 +168,6 @@ end
 
 # end
 
-
 function set_candidates!(partiesposs,
                          model::abm.ABM)
     δ = model.properties[:δ]
