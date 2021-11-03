@@ -32,7 +32,7 @@ import Distances as dist
 import Base.@kwdef
 using StaticArrays
 using StatsBase
-
+import GLMakie
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
@@ -414,6 +414,8 @@ for in this iteration.
 different from me;
 - I change my party id to this other party with a probability equal to tanh(proportion 1 + proportion 2). =#
 
+
+
 function update_partyid!(agentid,model)
     myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
     proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
@@ -473,9 +475,9 @@ end
 HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
 
 #adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
-mdata = [x->x[x.properties[:incumbent]].myPartyId]
 
-function get_distance_IvsParty(agentid, model)
+
+function get_distance_MyCandidatevsPartyCandidate(agentid, model)
 
 
     closest_to_me = get_closest_candidate(agentid,model)[1]
@@ -486,11 +488,61 @@ function get_distance_IvsParty(agentid, model)
 
 end
 
-get_distance_IvsParty(agent::Voter, model) = get_distance_IvsParty(agent.id, model)
+function get_distance_IvsPartyCandidate(agentid,model)
+    mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
+    dist.euclidean(model[agentid].pos,
+                   model[mypartycandidate].pos)
+end
+
+get_distance_IvsPartyCandidate(agent::Voter,model) = get_distance_IvsPartyCandidate(agent.id,model)
+get_distance_MyCandidatevsPartyCandidate(agent::Voter, model) = get_distance_MyCandidatevsPartyCandidate(agent.id, model)
+
+
+
+function get_representativeness(m::abm.ABM)
+    -sum([get_distance_IvsPartyCandidate(i,m) for i in abm.allids(m)])/m.properties[:nagents]
+end
+
+function get_representativeness(v,m)
+    -sum(v)/m.properties[:nagents]
+end
+
+function get_partyshare(m)
+    proportionmap([m.properties[:voterBallotTracker][agentid][end]
+    for agentid in abm.allids(m)])
+end
+
+function get_ENP(m)
+    shares = get_partyshare(m)
+    return(1/sum([i^2 for i in collect(values(shares))]))
+end
+
+mdata = [x->x[x.properties[:incumbent]].myPartyId,
+         get_ENP]
+
+function static_preplot!(ax,m)
+
+    xs,ys = begin
+        poss = [x[:partyposition]
+                for x in values(m.properties[:partiesposs])]
+        xs = [x[1] for x in poss]
+        ys = [x[2] for x in poss]
+        xs,ys
+    end
+
+     # be sure that the teacher will be above students
+    obj= GLMakie.scatter!(xs,ys,
+                          marker = :diamond,
+                          markersize = 25,
+                          color = :green)
+    GLMakie.hidedecorations!(ax)
+    GLMakie.translate!(obj, 0, 0, 5)
+
+end
 
 
 # TODO add data collection: incumbent eccentricity! maybe also a mean non-incumbent eccentricity
-# TODO: do a static preplot of parties positions!
+
 # TODO: try to visualize how myPartyId evolves!
 # TODO: withipartyshares could be an evolving barplot
 # TODO: I'm missing the general party shares info!

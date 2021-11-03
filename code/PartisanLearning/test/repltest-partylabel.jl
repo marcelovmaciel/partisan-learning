@@ -32,8 +32,11 @@ maximum([Distances.euclidean(m[k].pos,
      for k in keys(m.properties[:partiesposs])])
 
 # ** Try to analyze
-ncandidates = 4
+ncandidates = 10
 nissues = 2
+
+m.properties
+
 
 m = pla.initialize_model(1000,nissues,
                          ncandidates, δ = 3.)
@@ -51,12 +54,10 @@ agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 :
 # both depended upon the underlying boundaries! think about that !!!
 
 adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-         (a->(pla.get_distance_IvsParty(a,m)), pla.StatsBase.mean),
-         (:myPartyId, pla.StatsBase.mode)] # FIXME: This last aggregator doesnt tell much
+         (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
 
-alabels = ["Against PartyId", "dist(closest,party's)", "Mode-partyid"]
-mlabels = ["Incumbent"]
-
+alabels = ["Against PartyId", "Representativeness"]
+mlabels = ["Incumbent", "ENP"]
 
 fig,adf,mdf = abm_data_exploration(m,
                                    pla.abm.dummystep,
@@ -65,7 +66,11 @@ fig,adf,mdf = abm_data_exploration(m,
                                    adata, pla.mdata,
                                    alabels,mlabels,
                                    ac = agent_colors,
-                                   as = agent_size, spu = 1)
+                                   as = agent_size, spu = 1
+                                   , static_preplot! = pla.static_preplot! )
+
+
+pla.get_ENP(m)
 
 
 # ** Other tests
