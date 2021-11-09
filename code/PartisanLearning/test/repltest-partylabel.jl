@@ -12,15 +12,16 @@ using GLMakie
 using Agents
 import Distances
 
-
-
 # * PartyLabelModel
 # **  BUG: run the δ thing might be leading to a bug!
 ncandidates = 10
-nissues = 1
+nissues = 2
 
 m = pla.initialize_model(1000,nissues,
                          ncandidates, δ = 2)
+
+pla.DummyStreakCounter()
+
 ([Distances.euclidean(m[k].pos,
                      m[m.properties[:partiesposs][k][:partycandidate]].pos)
      for k in keys(m.properties[:partiesposs])])
@@ -57,7 +58,7 @@ adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nag
          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
 
 alabels = ["Against PartyId", "Representativeness"]
-mlabels = ["Incumbent", "ENP"]
+mlabels = ["Incumbent", "ENP", "Streaks"]
 
 fig,adf,mdf = abm_data_exploration(m,
                                    pla.abm.dummystep,

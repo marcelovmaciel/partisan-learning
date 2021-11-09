@@ -75,99 +75,6 @@ function sample_parties_pos(nparties, model)
     return(actualpartiesposs)
 end
 
-# function sample_parties_pos(nparties, model)
-#     ids = collect(abm.allids(model))
-
-#     partiesposs = Dict(map(x-> (x,model[x].pos),
-#                            sample(ids,nparties, replace = false)))
-#     actualpartiesposs = Dict(
-#         Pair(k,
-#              Dict(:partyposition => v,
-#                   :partycandidate => -1 ))
-#         for (k,v) in partiesposs)
-#     return(actualpartiesposs)
-# end
-
-# BUG: fuck this is bugged aaaaaaaaaaaaa
-
-# function mynearby_ids(
-#     pos::abm.ValidPos,
-#     model::abm.ABM{<:abm.ContinuousSpace{D,A,T}},
-#     r = 1;
-#     exact = false,
-# ) where {D,A,T}
-#     if exact
-#         grid_r_max = r < model.space.spacing ? T(1) : r / model.space.spacing + T(1)
-#         grid_r_certain = grid_r_max - T(1.2) * sqrt(D)
-#         focal_cell = CartesianIndex(abm.pos2cell(pos, model))
-#         allcells = abm.grid_space_neighborhood(focal_cell, model, grid_r_max)
-#         if grid_r_max >= 1
-#             certain_cells = abm.grid_space_neighborhood(focal_cell, model, grid_r_certain)
-#             certain_ids =
-#                 abm.Iterators.flatten(abm.ids_in_position(cell, model) for cell in certain_cells)
-
-#             uncertain_cells = setdiff(allcells, certain_cells) # This allocates, but not sure if there's a better way.
-#             uncertain_ids =
-#                 abm.Iterators.flatten(abm.ids_in_position(cell, model) for cell in uncertain_cells)
-
-#             additional_ids = abm.Iterators.filter(
-#                 i -> dist.euclidean(pos, model[i].pos) ≤ r,
-#                 uncertain_ids,
-#             )
-
-#             return abm.Iterators.flatten((certain_ids, additional_ids))
-#         else
-#             all_ids = abm.Iterators.flatten(abm.ids_in_position(cell, model) for cell in allcells)
-#             return abm.Iterators.filter(i -> dist.euclidean(pos, model[i].pos) ≤ r, all_ids)
-#         end
-#     else
-#         foo = abm.distance_from_cell_center(pos, abm.cell_center(pos, model))
-#         grid_r = (r + foo) / model.space.spacing
-#         return abm.nearby_ids_cell(pos, model, grid_r)
-#     end
-# end
-
-# function set_candidates!(partiesposs,
-#                          model::abm.ABM)
-#     δ = model.properties[:δ]
-#     getcandidateid(party)= sample(collect(
-#         mynearby_ids(party,
-#                        model,
-#                        δ,
-#                        exact = true)))
-
-#     candidatepartypairs = []
-
-#     for (pid,pvalue) in partiesposs
-#         # this allows me use it in the initial condition without any problem
-#         if model.properties[:incumbent] == 0
-#             #println(getcandidateid(pvalue[:partyposition]),  " ", pid)
-#             push!(candidatepartypairs,
-#                   Pair(getcandidateid(pvalue[:partyposition]),pid))
-#         # this one helps me to jump the incumbent after the initial condition
-#         elseif pid == model[model.properties[:incumbent]].myPartyId
-#                 continue
-#         else
-#             #println(getcandidateid(pvalue[:partyposition]), " ", pid)
-#             push!(candidatepartypairs,
-#                   Pair((pvalue[:partyposition]),
-#                        pid))
-#         end
-#     end
-
-#     candidateids =  Dict(candidatepartypairs)
-#     # println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
-
-#     for (candidateid, pid) in candidateids
-
-#         model[candidateid].amIaCandidate = true
-#         model[candidateid].myPartyId = pid
-#         partiesposs[pid][:partycandidate] = candidateid
-#     end
-
-
-# end
-
 function set_candidates!(partiesposs,
                          model::abm.ABM)
     δ = model.properties[:δ]
@@ -287,6 +194,28 @@ function get_withinpartyshares(model)
    Dict(Pair(k,proportionmap(v)) for (k,v) in withinpartyvotes)
 end
 
+
+mutable struct StreakCounter
+    old_incumbentholder::Int64
+    has_switchedlist::Vector{Bool}
+    current_streak::Int64
+    longest_streak::Dict # will hold both streak_value and incumbent_position
+end
+
+DummyStreakCounter() = StreakCounter(1,Vector{Bool}(), 0, Dict(:streak_value => 0,
+                                                                :incumbent_pos => (0,)))
+
+
+function initialize_streak_counter!(m)
+    m.properties[:streak_counter].old_incumbentholder = m.properties[:incumbent]
+    m.properties[:streak_counter].current_streak = 1
+    m.properties[:streak_counter].longest_streak[:streak_value] = 1
+    m.properties[:streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent]].pos
+end
+
+
+
+
 # TODO: Check if this is indeed correct
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
 function initialize_model(nagents::Int, nissues::Int, nparties;
@@ -319,7 +248,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :κ => κ,
                       :voters_partyids => voters_partyids,
                       :voterBallotTracker=>voterBallotTracker,
-                      :withinpartyshares => withinpartyshares)
+                      :withinpartyshares => withinpartyshares,
+                      :streak_counter => DummyStreakCounter())
     model = abm.ABM(Voter{nissues}, space, properties = properties)
 
     for i in 1:nagents
@@ -338,6 +268,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     end
 
     model.properties[:incumbent] = new_incumbent
+    initialize_streak_counter!(model)
     model.properties[:voters_partyids] = Dict((model[x].id => model[x].myPartyId)
                                        for x in abm.allids(model))
     model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:voters_partyids])
@@ -390,7 +321,6 @@ function get_whichCandidatePartyAgentVotesfor(agentid, model)
 
 end
 
-
 function get_proportion_peers_voteLikeMe(agentid,model)
     # This function only makes sense after updating m.properties[:voterBallotTracker]
     # and then updating the model.properties[:withinpartyshares]
@@ -415,7 +345,6 @@ different from me;
 - I change my party id to this other party with a probability equal to tanh(proportion 1 + proportion 2). =#
 
 
-
 function update_partyid!(agentid,model)
     myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
     proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
@@ -426,6 +355,26 @@ function update_partyid!(agentid,model)
     end
 end
 
+
+function update_streakCounter!(m)
+    if m.properties[:incumbent] != m.properties[:streak_counter].old_incumbentholder
+        push!(m.properties[:streak_counter].has_switchedlist, true)
+        m.properties[:streak_counter].current_streak = 1
+    else
+        m.properties[:streak_counter].current_streak +=1
+        push!(m.properties[:streak_counter].has_switchedlist, false)
+    end
+
+    if m.properties[:streak_counter].current_streak > m.properties[:streak_counter].longest_streak[:streak_value]
+        m.properties[:streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent]].pos
+        m.properties[:streak_counter].longest_streak[:streak_value] = m.properties[:streak_counter].current_streak
+    end
+end
+
+
+
+
+
 #FIXME: Double-check if I update the model.properties[:partiesposs][:partycandidate]!!!
 # I believe it does update with set_candidates! though. Nevertheless, check
 function model_step!(model)
@@ -433,7 +382,9 @@ function model_step!(model)
 
     new_winner = getmostvoted(model, :iteration)
 
-    model.properties[:incumbent]= new_winner
+    model.properties[:streak_counter].old_incumbentholder = model.properties[:incumbent]
+    model.properties[:incumbent] = new_winner
+    update_streakCounter!(model)
     for i in abm.allids(model)
         party_i_votedfor = get_whichCandidatePartyAgentVotesfor(i,model)[2]
         push!(model.properties[:voterBallotTracker][i], party_i_votedfor )
@@ -518,7 +469,8 @@ function get_ENP(m)
 end
 
 mdata = [x->x[x.properties[:incumbent]].myPartyId,
-         get_ENP]
+         get_ENP,
+         x->x.properties[:streak_counter].longest_streak[:streak_value]]
 
 function static_preplot!(ax,m)
 
@@ -541,11 +493,11 @@ function static_preplot!(ax,m)
 end
 
 
-# TODO add data collection: incumbent eccentricity! maybe also a mean non-incumbent eccentricity
 
+
+# TODO add data collection: incumbent eccentricity! maybe also a mean non-incumbent eccentricity
 # TODO: try to visualize how myPartyId evolves!
 # TODO: withipartyshares could be an evolving barplot
-# TODO: I'm missing the general party shares info!
 # TODO: write my own fucking visualization loop
 
 end  # this is where the module ends!!!
