@@ -206,11 +206,11 @@ DummyStreakCounter() = StreakCounter(1,Vector{Bool}(), 0, Dict(:streak_value => 
                                                                 :incumbent_pos => (0,)))
 
 
-function initialize_streak_counter!(m)
-    m.properties[:streak_counter].old_incumbentholder = m.properties[:incumbent]
-    m.properties[:streak_counter].current_streak = 1
-    m.properties[:streak_counter].longest_streak[:streak_value] = 1
-    m.properties[:streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent]].pos
+function initialize_incumbent_streak_counter!(m)
+    m.properties[:incumbent_streak_counter].old_incumbentholder = m.properties[:incumbent]
+    m.properties[:incumbent_streak_counter].current_streak = 1
+    m.properties[:incumbent_streak_counter].longest_streak[:streak_value] = 1
+    m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent]].pos
 end
 
 
@@ -249,7 +249,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :voters_partyids => voters_partyids,
                       :voterBallotTracker=>voterBallotTracker,
                       :withinpartyshares => withinpartyshares,
-                      :streak_counter => DummyStreakCounter())
+                      :incumbent_streak_counter => DummyStreakCounter(),
+                      :party_switches => [0])
     model = abm.ABM(Voter{nissues}, space, properties = properties)
 
     for i in 1:nagents
@@ -268,7 +269,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     end
 
     model.properties[:incumbent] = new_incumbent
-    initialize_streak_counter!(model)
+    initialize_incumbent_streak_counter!(model)
     model.properties[:voters_partyids] = Dict((model[x].id => model[x].myPartyId)
                                        for x in abm.allids(model))
     model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:voters_partyids])
@@ -357,20 +358,27 @@ end
 
 
 function update_streakCounter!(m)
-    if m.properties[:incumbent] != m.properties[:streak_counter].old_incumbentholder
-        push!(m.properties[:streak_counter].has_switchedlist, true)
-        m.properties[:streak_counter].current_streak = 1
+    if m.properties[:incumbent] != m.properties[:incumbent_streak_counter].old_incumbentholder
+        push!(m.properties[:incumbent_streak_counter].has_switchedlist, true)
+        m.properties[:incumbent_streak_counter].current_streak = 1
     else
-        m.properties[:streak_counter].current_streak +=1
-        push!(m.properties[:streak_counter].has_switchedlist, false)
+        m.properties[:incumbent_streak_counter].current_streak +=1
+        push!(m.properties[:incumbent_streak_counter].has_switchedlist, false)
     end
 
-    if m.properties[:streak_counter].current_streak > m.properties[:streak_counter].longest_streak[:streak_value]
-        m.properties[:streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent]].pos
-        m.properties[:streak_counter].longest_streak[:streak_value] = m.properties[:streak_counter].current_streak
+    if m.properties[:incumbent_streak_counter].current_streak > m.properties[:incumbent_streak_counter].longest_streak[:streak_value]
+        m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent]].pos
+        m.properties[:incumbent_streak_counter].longest_streak[:streak_value] = m.properties[:incumbent_streak_counter].current_streak
     end
 end
 
+# this only makes sense AFTER updating the agent partyid
+# but BEFORE updating the global voters_partyids
+function add_partyswitch_tocounter!(i,m)
+    if m[i].myPartyId != m.properties[:voters_partyids][i]
+        m.properties[:party_switches][end]+=1
+        end
+end
 
 
 
@@ -382,7 +390,7 @@ function model_step!(model)
 
     new_winner = getmostvoted(model, :iteration)
 
-    model.properties[:streak_counter].old_incumbentholder = model.properties[:incumbent]
+    model.properties[:incumbent_streak_counter].old_incumbentholder = model.properties[:incumbent]
     model.properties[:incumbent] = new_winner
     update_streakCounter!(model)
     for i in abm.allids(model)
@@ -391,10 +399,12 @@ function model_step!(model)
     end
     model.properties[:withinpartyshares] = get_withinpartyshares(model)
 
+    push!(model.properties[:party_switches], 0)
     #=In this loop agents deal with their new choice
     #of candidate by updating their partyid =#
     for i in abm.allids(model)
         update_partyid!(i,model)
+        add_partyswitch_tocounter!(i,model)
         model.properties[:voters_partyids][i] = model[i].myPartyId
     end
 end
@@ -467,10 +477,10 @@ function get_ENP(m)
     shares = get_partyshare(m)
     return(1/sum([i^2 for i in collect(values(shares))]))
 end
-
-mdata = [x->x[x.properties[:incumbent]].myPartyId,
-         get_ENP,
-         x->x.properties[:streak_counter].longest_streak[:streak_value]]
+# x->x[x.properties[:incumbent]].myPartyId, # get incumbent
+mdata = [get_ENP,
+         x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
+         x-> x.properties[:party_switches][end]]
 
 function static_preplot!(ax,m)
 

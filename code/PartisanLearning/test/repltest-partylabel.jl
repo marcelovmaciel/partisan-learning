@@ -28,12 +28,16 @@ pla.DummyStreakCounter()
 
 pla.model_step!(m)
 
+
+m.properties[:voters_partyids]
+
+
 maximum([Distances.euclidean(m[k].pos,
                      m[m.properties[:partiesposs][k][:partycandidate]].pos)
      for k in keys(m.properties[:partiesposs])])
 
 # ** Try to analyze
-ncandidates = 10
+ncandidates = 3
 nissues = 2
 
 m.properties
@@ -42,7 +46,7 @@ m.properties
 m = pla.initialize_model(1000,nissues,
                          ncandidates, δ = 3.)
 params = Dict(:κ => 0.0:1.:20.,
-              :δ => 3.:1.:20.)
+              :δ => 1:1:20)
 
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
@@ -56,15 +60,18 @@ agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 :
 
 adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+mdata = [pla.get_ENP,
+         x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
+         x-> x.properties[:party_switches][end]/x.properties[:nagents]]
 
 alabels = ["Against PartyId", "Representativeness"]
-mlabels = ["Incumbent", "ENP", "Streaks"]
+mlabels = ["ENP", "IStreaks", "PSwitches"]
 
 fig,adf,mdf = abm_data_exploration(m,
                                    pla.abm.dummystep,
                                    pla.model_step!,
                                    params;
-                                   adata, pla.mdata,
+                                   adata, mdata,
                                    alabels,mlabels,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1
