@@ -33,6 +33,7 @@ import Base.@kwdef
 using StaticArrays
 using StatsBase
 import GLMakie
+import DataFrames as DF
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
@@ -382,7 +383,6 @@ end
 
 
 
-
 #FIXME: Double-check if I update the model.properties[:partiesposs][:partycandidate]!!!
 # I believe it does update with set_candidates! though. Nevertheless, check
 function model_step!(model)
@@ -477,10 +477,14 @@ function get_ENP(m)
     shares = get_partyshare(m)
     return(1/sum([i^2 for i in collect(values(shares))]))
 end
+
+function normalized_ENP(m)
+    get_ENP(m)/m.properties[:ncandidates]
+end
+
 # x->x[x.properties[:incumbent]].myPartyId, # get incumbent
-mdata = [get_ENP,
-         x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
-         x-> x.properties[:party_switches][end]]
+
+
 
 function static_preplot!(ax,m)
 

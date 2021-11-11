@@ -60,12 +60,13 @@ agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 :
 
 adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
-mdata = [pla.get_ENP,
+
+mdata = [pla.normalized_ENP,
          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
          x-> x.properties[:party_switches][end]/x.properties[:nagents]]
 
-alabels = ["Against PartyId", "Representativeness"]
-mlabels = ["ENP", "IStreaks", "PSwitches"]
+alabels = ["¬-PartyId", "Rep"]
+mlabels = ["NENP", "IStreaks", "PSwitches"]
 
 fig,adf,mdf = abm_data_exploration(m,
                                    pla.abm.dummystep,
@@ -76,7 +77,6 @@ fig,adf,mdf = abm_data_exploration(m,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1
                                    , static_preplot! = pla.static_preplot! )
-
 
 pla.get_ENP(m)
 
