@@ -1,55 +1,51 @@
-import Pkg
-Pkg.activate("../")
+using Distributed
+addprocs(2)
 
 
-using Revise
-import PartisanLearning as pl
-const pla = pl.PartyLabel
-JULIA_PYTHONCALL_EXE = "/home/marcelovmaciel/miniconda3/bin/python"
+@everywhere import Pkg
+@everywhere Pkg.activate("../")
+@everywhere JULIA_PYTHONCALL_EXE = "/home/marcelovmaciel/miniconda3/bin/python"
 
-using PythonCall
+@everywhere using Revise
+@everywhere import PartisanLearning as pl
+@everywhere const pla = pl.PartyLabel
+
+
 
 # PythonCall.Deps.add(conda_channels = ["conda-forge"],
 #                     conda_packages = ["SALib"]
 #                     )
 
-varnames =  ["ncandidates",  "κ", "δ"]
-bounds = [[2.,20.], [0.,20.], [1.,10.] ]
+@everywhere varnames =  ["ncandidates",  "κ", "δ"]
+@everywhere bounds = [[2.,20.], [0.,20.], [1.,10.] ]
 
+@everywhere design_matrix = pla.boundsdict_toparamsdf(varnames, bounds)
 
-function boundsdict_toparamsdf(varnames, bounds;samplesize = 5_000)
-    saltelli = pyimport("SALib.sample.saltelli")
-    function saltellidict(varnames::Vector{String}, bounds)
-        Dict("names" => varnames,
-             "bounds" => PythonCall.PyList(bounds),
-             "num_vars" => length(varnames))
-    end
+@everywhere design_matrix[!, :ncandidates] = Int.(round.(design_matrix[!, :ncandidates]))
 
-    boundsdict = saltellidict(varnames, bounds)
+design_matrix
 
-    problem_array = pyconvert(Array,
-                              saltelli.sample(boundsdict, samplesize,
-                                              calc_second_order = true ))
+@everywhere nagents = 1000
+@everywhere nissues = 2
+@everywhere niterations = 3000
 
+@everywhere adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+         (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
 
-    foodf = pla.DF.DataFrame()
+@everywhere mdata = [pla.normalized_ENP,
+         x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
+         x-> x.properties[:party_switches][end]/x.properties[:nagents]]
 
-    for (index,value) in enumerate(boundsdict["names"])
-        setproperty!(foodf,Symbol(value), problem_array[:, index])
-    end
-    return(foodf)
+for i in 1:10
+@everywhere x = eachrow(design_matrix)[1]
+    ms = [pla.initialize_model( nagents, nissues, x.ncandidates,
+                               κ=  x.κ, δ =  x.δ,
+                               seed = s) for s in rand(UInt8, 3)]
+    pla.abm.ensemblerun!(ms, pla.abm.dummystep, pla.model_step!, 5;
+                     adata,
+                     mdata, parallel = true )
 end
 
-boundsdict_toparamsdf(varnames, bounds)
 
 
-n = 5000
-lb = [first(param) for param in [ncandidates, κ, δ]]
-ub = [param[2] for param in [ncandidates, κ, δ]]
-
-
-As = QuasiMonteCarlo.sample(n,lb,ub,SobolSample())
-
-Int.(round.(As[1, :]))
-
-Pkg.build("PyCall")
+"../../../data"

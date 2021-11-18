@@ -34,6 +34,11 @@ using StaticArrays
 using StatsBase
 import GLMakie
 import DataFrames as DF
+using PythonCall
+using Random
+import CSV
+using ProgressMeter
+
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
@@ -215,14 +220,12 @@ function initialize_incumbent_streak_counter!(m)
 end
 
 
-
-
 # TODO: Check if this is indeed correct
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
 function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 2.,  δ=1.)
+                          κ = 2.,  δ=1.,  seed = 125)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
-
+    rng = Random.MersenneTwister(seed)
     # postype = typeof(ntuple(x -> 1.,nissues))
 
     #=
@@ -252,7 +255,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :withinpartyshares => withinpartyshares,
                       :incumbent_streak_counter => DummyStreakCounter(),
                       :party_switches => [0])
-    model = abm.ABM(Voter{nissues}, space, properties = properties)
+    model = abm.ABM(Voter{nissues}, space; rng,properties = properties)
 
     for i in 1:nagents
         vi = Voter(i, nissues)
@@ -354,6 +357,7 @@ function update_partyid!(agentid,model)
     changechange = tanh(proportion_IvotedForThisParty + proportion_peersUnlikeMe)
     if rand() < changechange
         model[agentid].myPartyId = myLast_PartyVote
+        #model.properties[:voterBallotTracker][agentid] = [myLast_PartyVote]
     end
 end
 
@@ -506,6 +510,78 @@ function static_preplot!(ax,m)
 
 end
 
+function boundsdict_toparamsdf(varnames, bounds;samplesize= 2^7)
+    saltelli = pyimport("SALib.sample.saltelli")
+    function saltellidict(varnames::Vector{String}, bounds)
+        Dict("names" => varnames,
+             "bounds" => PythonCall.PyList(bounds),
+             "num_vars" => length(varnames))
+    end
+
+    boundsdict = saltellidict(varnames, bounds)
+
+    problem_array = pyconvert(Array,
+                              saltelli.sample(boundsdict, samplesize,
+                                              calc_second_order = true ))
+    foodf = DF.DataFrame()
+
+    for (index,value) in enumerate(boundsdict["names"])
+        setproperty!(foodf,Symbol(value), problem_array[:, index])
+    end
+    return(foodf)
+end
+
+
+datapath = "../../../data"
+
+
+function run_analysis_onRow(sim_cons,
+                            row,
+                            rowIdx,
+                            whichIter,
+                            threadId)
+    m = initialize_model(sim_cons[:nagents], sim_cons[:nissues], row.ncandidates,
+                             κ=  row.κ, δ =  row.δ)
+
+    adata = [(a->(HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+             (a->(get_distance_IvsPartyCandidate(a,m)), d -> get_representativeness(d,m))]
+
+    mdata = [normalized_ENP,
+           x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
+             x-> x.properties[:party_switches][end]/x.properties[:nagents]]
+
+    ad,md = abm.run!(m, abm.dummystep, model_step!, sim_cons[:niterations] ;
+                       adata= adata,
+                       mdata=mdata)#, when = collect_steps, when_model= collect_steps)
+
+    alabels = ["step","Prop¬PartyId", "Representativeness"]
+    mlabels = ["step", "NENP", "LongestIStreak", "PartySwitches"]
+    DF.rename!(ad, alabels)
+    DF.rename!(md,mlabels)
+    df = hcat(ad, md, makeunique=true)
+    DF.select!(df, DF.Not(:step_1))
+
+    CSV.write(joinpath(datapath,
+                       "row$(rowIdx)_iter$(whichIter)_thread$threadId.csv"),
+              df)
+    m = nothing
+    df = nothing
+end
+
+
+function run_analysis(sim_cons, dm, threadId)
+
+    for iter in 1:10
+         ProgressMeter.@showprogress 5 "Simulating..." for (rowidx,
+                                             rowval) in enumerate(eachrow(dm))
+            run_analysis_onRow(sim_cons,
+                               rowval,
+                               rowidx,
+                               iter,
+                               threadId)
+        end
+    end
+end
 
 
 

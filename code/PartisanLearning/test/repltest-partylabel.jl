@@ -2,6 +2,7 @@ import Pkg
 
 Pkg.activate("../")
 
+
 using Revise
 import PartisanLearning as pl
 const is = pl.IssueSalience
@@ -12,13 +13,16 @@ using GLMakie
 using Agents
 import Distances
 
+
+
+
 # * PartyLabelModel
 # **  BUG: run the δ thing might be leading to a bug!
 ncandidates = 10
 nissues = 2
 
-m = pla.initialize_model(1000,nissues,
-                         ncandidates, δ = 2)
+m = pla.initialize_model(100,nissues,
+                         ncandidates, δ = 5)
 
 pla.DummyStreakCounter()
 
@@ -30,20 +34,15 @@ pla.model_step!(m)
 
 
 m.properties[:voters_partyids]
-
-
 maximum([Distances.euclidean(m[k].pos,
                      m[m.properties[:partiesposs][k][:partycandidate]].pos)
      for k in keys(m.properties[:partiesposs])])
 
 # ** Try to analyze
-ncandidates = 3
+ncandidates = 15
 nissues = 2
 
-m.properties
-
-
-m = pla.initialize_model(1000,nissues,
+m = pla.initialize_model(,nissues,
                          ncandidates, δ = 3.)
 params = Dict(:κ => 0.0:1.:20.,
               :δ => 1:1:20)
@@ -77,8 +76,6 @@ fig,adf,mdf = abm_data_exploration(m,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1
                                    , static_preplot! = pla.static_preplot! )
-
-pla.get_ENP(m)
 
 
 # ** Other tests
