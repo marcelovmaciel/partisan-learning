@@ -32,6 +32,7 @@ import Distances as dist
 import Base.@kwdef
 using StaticArrays
 using StatsBase
+import Statistics
 import GLMakie
 import DataFrames as DF
 using PythonCall
@@ -220,6 +221,17 @@ function initialize_incumbent_streak_counter!(m)
 end
 
 
+function get_median_pos(m)
+    dims = m.properties[:nissues]
+    medians = Vector{Float64}()
+    for dim in 1:dims
+        dimmedian = Statistics.median([m[x].pos[dim] for x in  abm.allids(m)])
+        push!(medians, dimmedian)
+    end
+    return(medians)
+ end
+
+
 # TODO: Check if this is indeed correct
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
 function initialize_model(nagents::Int, nissues::Int, nparties;
@@ -254,7 +266,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :voterBallotTracker=>voterBallotTracker,
                       :withinpartyshares => withinpartyshares,
                       :incumbent_streak_counter => DummyStreakCounter(),
-                      :party_switches => [0])
+                      :party_switches => [0],
+                      :median_pos => [])
     model = abm.ABM(Voter{nissues}, space; rng,properties = properties)
 
     for i in 1:nagents
@@ -278,6 +291,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                                        for x in abm.allids(model))
     model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:voters_partyids])
     model.properties[:withinpartyshares] = get_withinpartyshares(model)
+    model.properties[:median_pos] = get_median_pos(model)
     return(model)
 end
 
@@ -459,6 +473,7 @@ function get_distance_IvsPartyCandidate(agentid,model)
                    model[mypartycandidate].pos)
 end
 
+
 get_distance_IvsPartyCandidate(agent::Voter,model) = get_distance_IvsPartyCandidate(agent.id,model)
 get_distance_MyCandidatevsPartyCandidate(agent::Voter, model) = get_distance_MyCandidatevsPartyCandidate(agent.id, model)
 
@@ -472,21 +487,31 @@ function get_representativeness(v,m)
     -sum(v)/m.properties[:nagents]
 end
 
+
 function get_partyshare(m)
     proportionmap([m.properties[:voterBallotTracker][agentid][end]
     for agentid in abm.allids(m)])
 end
+
 
 function get_ENP(m)
     shares = get_partyshare(m)
     return(1/sum([i^2 for i in collect(values(shares))]))
 end
 
+
 function normalized_ENP(m)
     get_ENP(m)/m.properties[:ncandidates]
 end
 
+
 # x->x[x.properties[:incumbent]].myPartyId, # get incumbent
+
+
+function get_incumbent_eccentricity(m)
+    dist.euclidean(m[m.properties[:incumbent]].pos,
+                   m.properties[:median_pos])
+end
 
 
 
@@ -571,8 +596,8 @@ end
 
 function run_analysis(sim_cons, dm, threadId)
 
-    for iter in 1:10
-         ProgressMeter.@showprogress 5 "Simulating..." for (rowidx,
+    ProgressMeter.@showprogress 5 "Simulating..."  for iter in 1:10
+         for (rowidx,
                                              rowval) in enumerate(eachrow(dm))
             run_analysis_onRow(sim_cons,
                                rowval,

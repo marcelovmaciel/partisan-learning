@@ -42,7 +42,7 @@ maximum([Distances.euclidean(m[k].pos,
 ncandidates = 15
 nissues = 2
 
-m = pla.initialize_model(,nissues,
+m = pla.initialize_model(500,nissues,
                          ncandidates, δ = 3.)
 params = Dict(:κ => 0.0:1.:20.,
               :δ => 1:1:20)
@@ -133,3 +133,29 @@ fig,adf,mdf = abm_data_exploration(m,
                                    alabels,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1)
+
+
+# ** Eccentricity test
+
+ncandidates = 15
+nissues = 2
+
+m = pla.initialize_model(500,nissues,
+                         ncandidates, δ = 3.)
+pla.get_median_pos(m)
+
+dims = m.properties[:nissues]
+medians = Vector{Float64}()
+
+for dim in 1:dims
+    dimmedian = Statistics.median([m[x].pos[dim] for x in  pla.abm.allids(m)])
+        push!(medians, dimmedian)
+end
+
+
+
+# TODO: check Incumbent again
+
+
+m.properties[:median_pos]
+pla.dist.euclidean(m.properties[:incumbent])
