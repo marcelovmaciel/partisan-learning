@@ -37,7 +37,7 @@ end
 
 
 function model_initialize(nagents,n, ncs,  r = 1)
-    space = ContinuousSpace(ntuple(x -> float(10),n))
+    space = ContinuousSpace(ntuple(x -> float(10),n), periodic=false)
 
     model = ABM(DummyAgent{n}, space, properties = Dict(:n=> n,
                                                         :r => r,

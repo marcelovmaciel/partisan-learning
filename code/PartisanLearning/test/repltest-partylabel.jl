@@ -39,13 +39,20 @@ maximum([Distances.euclidean(m[k].pos,
      for k in keys(m.properties[:partiesposs])])
 
 # ** Try to analyze
-ncandidates = 15
+ncandidates = 2
 nissues = 2
 
 m = pla.initialize_model(500,nissues,
                          ncandidates, δ = 3.)
 params = Dict(:κ => 0.0:1.:20.,
               :δ => 1:1:20)
+
+
+
+pla.abm.nearby_ids((0.5,0.5),
+                       m,
+                       1.,
+                       exact = true) |> collect
 
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
@@ -62,10 +69,11 @@ adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nag
 
 mdata = [pla.normalized_ENP,
          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
-         x-> x.properties[:party_switches][end]/x.properties[:nagents]]
+         x-> x.properties[:party_switches][end]/x.properties[:nagents],
+         pla.get_incumbent_eccentricity]
 
 alabels = ["¬-PartyId", "Rep"]
-mlabels = ["NENP", "IStreaks", "PSwitches"]
+mlabels = ["NENP", "IStreaks", "PSwitches", "ecc"]
 
 fig,adf,mdf = abm_data_exploration(m,
                                    pla.abm.dummystep,
@@ -77,6 +85,12 @@ fig,adf,mdf = abm_data_exploration(m,
                                    as = agent_size, spu = 1
                                    , static_preplot! = pla.static_preplot! )
 
+
+
+
+# TODO: think about this weird behavior in which people switch
+# more than they vote against their party
+# Maybe I'm doing some mistake on counting the switches
 
 # ** Other tests
 
@@ -159,3 +173,54 @@ end
 
 m.properties[:median_pos]
 pla.dist.euclidean(m.properties[:incumbent])
+
+
+# * Test sampler
+
+ncandidates = 2
+nissues = 2
+
+m = pla.initialize_model(500,nissues,
+                         ncandidates, δ = 3.)
+params = Dict(:κ => 0.0:1.:20.,
+              :δ => 1:1:20)
+
+# TODO: run with 0.5,0.5 below : wtf is that a periodic boundary condition on?
+# FIXME: yes, periodic conditions are on! LOL
+neighs = pla.abm.nearby_ids((10,10),
+                       m,
+                       1,
+                       exact = true) |> collect
+
+[pla.dist.euclidean((5,5), m[x].pos) for x in neighs] |> maximum
+
+agent_colors(a) = a.id in neighs  ? :yellow : "#2b2b33"
+agent_size(a) = a.id in neighs  ? 20 :  5
+
+
+#higher kappa means agents will tend to vote more for
+#their partyid. Conversely, lower kappa means people vote more
+# for candidates closer to then rather than closer to their party
+# higher δ means parties sample further from their location.
+# both depended upon the underlying boundaries! think about that !!!
+
+adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+         (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+
+mdata = [pla.normalized_ENP,
+         x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
+         x-> x.properties[:party_switches][end]/x.properties[:nagents],
+         pla.get_incumbent_eccentricity]
+
+alabels = ["¬-PartyId", "Rep"]
+mlabels = ["NENP", "IStreaks", "PSwitches", "ecc"]
+
+fig,adf,mdf = abm_data_exploration(m,
+                                   pla.abm.dummystep,
+                                   pla.model_step!,
+                                   params;
+                                   adata, mdata,
+                                   alabels,mlabels,
+                                   ac = agent_colors,
+                                   as = agent_size, spu = 1
+                                   , static_preplot! = pla.static_preplot! )

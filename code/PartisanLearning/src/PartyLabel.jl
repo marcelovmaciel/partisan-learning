@@ -236,7 +236,7 @@ function get_median_pos(m)
 "initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
 function initialize_model(nagents::Int, nissues::Int, nparties;
                           κ = 2.,  δ=1.,  seed = 125)
-    space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues))
+    space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues), periodic = false)
     rng = Random.MersenneTwister(seed)
     # postype = typeof(ntuple(x -> 1.,nissues))
 

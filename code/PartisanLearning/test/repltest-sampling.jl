@@ -45,7 +45,3 @@ for i in 1:10
                      adata,
                      mdata, parallel = true )
 end
-
-
-
-"../../../data"
