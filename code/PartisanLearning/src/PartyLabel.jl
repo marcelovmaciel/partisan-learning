@@ -368,11 +368,12 @@ function update_partyid!(agentid,model)
     myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
     proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
     proportion_peersUnlikeMe = (1-get_proportion_peers_voteLikeMe(agentid,model))
-    changechange = tanh(proportion_IvotedForThisParty + proportion_peersUnlikeMe)
-    if rand() < changechange
+    changechance = (proportion_IvotedForThisParty + proportion_peersUnlikeMe)/2
+    if rand() < changechance
         model[agentid].myPartyId = myLast_PartyVote
         #model.properties[:voterBallotTracker][agentid] = [myLast_PartyVote]
     end
+    println(changechance)
 end
 
 
@@ -398,7 +399,6 @@ function add_partyswitch_tocounter!(i,m)
         m.properties[:party_switches][end]+=1
         end
 end
-
 
 
 #FIXME: Double-check if I update the model.properties[:partiesposs][:partycandidate]!!!

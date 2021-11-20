@@ -15,37 +15,15 @@ import Distances
 
 
 
-
-# * PartyLabelModel
-# **  BUG: run the δ thing might be leading to a bug!
-ncandidates = 10
-nissues = 2
-
-m = pla.initialize_model(100,nissues,
-                         ncandidates, δ = 5)
-
-pla.DummyStreakCounter()
-
-([Distances.euclidean(m[k].pos,
-                     m[m.properties[:partiesposs][k][:partycandidate]].pos)
-     for k in keys(m.properties[:partiesposs])])
-
-pla.model_step!(m)
-
-
-m.properties[:voters_partyids]
-maximum([Distances.euclidean(m[k].pos,
-                     m[m.properties[:partiesposs][k][:partycandidate]].pos)
-     for k in keys(m.properties[:partiesposs])])
-
 # ** Try to analyze
 ncandidates = 2
 nissues = 2
 
 m = pla.initialize_model(500,nissues,
                          ncandidates, δ = 3.)
-params = Dict(:κ => 0.0:1.:20.,
-              :δ => 1:1:20)
+
+params = Dict(:κ => 0.0:1.:7,
+              :δ => 0.5:0.5:7)
 
 
 
@@ -165,7 +143,6 @@ for dim in 1:dims
     dimmedian = Statistics.median([m[x].pos[dim] for x in  pla.abm.allids(m)])
         push!(medians, dimmedian)
 end
-
 
 
 # TODO: check Incumbent again
