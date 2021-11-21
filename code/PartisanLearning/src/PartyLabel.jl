@@ -573,14 +573,15 @@ function run_analysis_onRow(sim_cons,
 
     mdata = [normalized_ENP,
            x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
-             x-> x.properties[:party_switches][end]/x.properties[:nagents]]
+             x-> x.properties[:party_switches][end]/x.properties[:nagents],
+             get_incumbent_eccentricity]
 
     ad,md = abm.run!(m, abm.dummystep, model_step!, sim_cons[:niterations] ;
                        adata= adata,
                        mdata=mdata)#, when = collect_steps, when_model= collect_steps)
 
     alabels = ["step","Prop¬PartyId", "Representativeness"]
-    mlabels = ["step", "NENP", "LongestIStreak", "PartySwitches"]
+    mlabels = ["step", "NENP", "LongestIStreak", "PartySwitches", "Eccentricity"]
     DF.rename!(ad, alabels)
     DF.rename!(md,mlabels)
     df = hcat(ad, md, makeunique=true)
