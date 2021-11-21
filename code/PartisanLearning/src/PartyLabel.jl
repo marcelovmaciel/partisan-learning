@@ -373,7 +373,7 @@ function update_partyid!(agentid,model)
         model[agentid].myPartyId = myLast_PartyVote
         #model.properties[:voterBallotTracker][agentid] = [myLast_PartyVote]
     end
-    println(changechance)
+
 end
 
 
