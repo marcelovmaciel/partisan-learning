@@ -33,7 +33,7 @@ import Base.@kwdef
 using StaticArrays
 using StatsBase
 import Statistics
-import GLMakie
+# import GLMakie
 import DataFrames as DF
 using PythonCall
 using Random
@@ -515,25 +515,25 @@ end
 
 
 
-function static_preplot!(ax,m)
+# function static_preplot!(ax,m)
 
-    xs,ys = begin
-        poss = [x[:partyposition]
-                for x in values(m.properties[:partiesposs])]
-        xs = [x[1] for x in poss]
-        ys = [x[2] for x in poss]
-        xs,ys
-    end
+#     xs,ys = begin
+#         poss = [x[:partyposition]
+#                 for x in values(m.properties[:partiesposs])]
+#         xs = [x[1] for x in poss]
+#         ys = [x[2] for x in poss]
+#         xs,ys
+#     end
 
-     # be sure that the teacher will be above students
-    obj= GLMakie.scatter!(xs,ys,
-                          marker = :diamond,
-                          markersize = 25,
-                          color = :green)
-    GLMakie.hidedecorations!(ax)
-    GLMakie.translate!(obj, 0, 0, 5)
+#      # be sure that the teacher will be above students
+#     obj= GLMakie.scatter!(xs,ys,
+#                           marker = :diamond,
+#                           markersize = 25,
+#                           color = :green)
+#     GLMakie.hidedecorations!(ax)
+#     GLMakie.translate!(obj, 0, 0, 5)
 
-end
+# end
 
 function boundsdict_toparamsdf(varnames, bounds;samplesize= 2^7)
     saltelli = pyimport("SALib.sample.saltelli")
@@ -611,7 +611,65 @@ end
 
 
 
-# TODO add data collection: incumbent eccentricity! maybe also a mean non-incumbent eccentricity
+
+#get_longestIStreak(df)= df[end,:LongestIStreak]
+
+get_mean_col_val(df,col,niterations)= StatsBase.mean(df[end-(niterations-1):end,col])
+
+function get_system_measures(df)
+    vars =  names(DF.select(df, DF.Not([:step])))
+
+    Dict(Pair(var, get_mean_col_val(df, var, 20)) for var in vars)
+
+end
+
+readdf(dfname) = CSV.read(joinpath(datapath,dfname),
+                          DF.DataFrame)
+
+function system_measure_AtRepetions(whichParametization)
+    data = readdir(datapath)
+
+    map(get_system_measures∘readdf,
+        filter(x-> ("row$(whichParametization)" == split(x, "_")[1]),
+               data))
+end
+
+
+
+function DictionariesToDataFrame(dictlist)
+  ret = Dict()                 #Holds dataframe's columns while we build it
+  #Get all unique keys from dictlist and make them entries in ret
+  for x in unique([y for x in [collect(keys(x)) for x in dictlist] for y in x])
+    ret[x] = []
+  end
+  for row in dictlist          #Loop through each row
+    for (key,value) in ret     #Use ret to check all possible keys in row
+      if haskey(row,key)       #Is key present in row?
+        push!(value, row[key]) #Yes
+      else                     #Nope
+        push!(value, nothing)  #So add nothing. Keeps columns same length.
+      end
+    end
+  end
+  #Fix the data types of the columns
+  for (k,v) in ret                             #Consider each column
+    row_type = unique([typeof(x) for x in v])  #Get datatypes of each row
+    if length(row_type)==1                     #All rows had same datatype
+      row_type = row_type[1]                   #Fetch datatype
+      ret[k]   = convert(Array{row_type,1}, v) #Convert column to that type
+    end
+  end
+  #DataFrame is ready to go!
+  return DF.DataFrame(ret)
+end
+
+
+function get_ParametizationMeasuresMeans(whichparametrization)
+    repetitionsvalues= DictionariesToDataFrame(system_measure_AtRepetions(whichparametrization))
+    return(DF.mapcols(StatsBase.mean, repetitionsvalues))
+end
+
+
 # TODO: try to visualize how myPartyId evolves!
 # TODO: withipartyshares could be an evolving barplot
 # TODO: write my own fucking visualization loop

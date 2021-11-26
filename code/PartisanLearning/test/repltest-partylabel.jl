@@ -16,7 +16,7 @@ import Distances
 
 
 # ** Try to analyze
-ncandidates = 2
+ncandidates = 15
 nissues = 2
 
 m = pla.initialize_model(500,nissues,

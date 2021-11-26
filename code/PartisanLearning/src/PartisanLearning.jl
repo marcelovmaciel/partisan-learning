@@ -1,7 +1,7 @@
 
 module PartisanLearning
 
-using GLMakie
+#using GLMakie
 using InteractiveDynamics
 
 include("01-primarydefs.jl")
