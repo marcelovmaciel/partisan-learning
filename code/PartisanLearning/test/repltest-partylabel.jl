@@ -26,12 +26,6 @@ params = Dict(:κ => 0.0:1.:7,
               :δ => 0.5:0.5:7)
 
 
-
-pla.abm.nearby_ids((0.5,0.5),
-                       m,
-                       1.,
-                       exact = true) |> collect
-
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
 
@@ -42,7 +36,7 @@ agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 :
 # higher δ means parties sample further from their location.
 # both depended upon the underlying boundaries! think about that !!!
 
-adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+adata = [#(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
 
 mdata = [pla.normalized_ENP,
@@ -50,7 +44,7 @@ mdata = [pla.normalized_ENP,
          x-> x.properties[:party_switches][end]/x.properties[:nagents],
          pla.get_incumbent_eccentricity]
 
-alabels = ["¬-PartyId", "Rep"]
+alabels = ["Rep"]
 mlabels = ["NENP", "IStreaks", "PSwitches", "ecc"]
 
 fig,adf,mdf = abm_data_exploration(m,
@@ -60,8 +54,7 @@ fig,adf,mdf = abm_data_exploration(m,
                                    adata, mdata,
                                    alabels,mlabels,
                                    ac = agent_colors,
-                                   as = agent_size, spu = 1
-                                   , static_preplot! = pla.static_preplot! )
+                                   as = agent_size, spu = 1 )
 
 
 
@@ -69,6 +62,45 @@ fig,adf,mdf = abm_data_exploration(m,
 # TODO: think about this weird behavior in which people switch
 # more than they vote against their party
 # Maybe I'm doing some mistake on counting the switches
+
+
+
+function pltfn(foo, fig = fig)
+
+k =  collect(keys(foo.val))
+pie(fig[1,3], [foo.val[v] for v in k], color = k, radius = 5, inner_radius = 2)
+             end
+
+function newstep(m, foo = foo)
+    pla.model_step!(m)
+    foo[] = m.properties[:withinpartyshares][296]
+
+end
+
+partyids = collect(keys(partyproportions))
+partyproportions = pla.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
+
+
+barplot(partyids, [partyproportions[p] for p in partyids])
+
+
+
+fig,adf,mdf = abm_data_exploration(m,
+                                   pla.abm.dummystep,
+                                   newstep,
+                                   params;
+                                   adata, mdata,
+                                   alabels,mlabels,
+                                   ac = agent_colors,
+                                   as = agent_size, spu = 1 )
+
+
+pltfn(foo)
+
+pie(m.properties[:withinpartyshares][296]|>values)
+
+pie(1:5)
+
 
 # ** Other tests
 
@@ -78,6 +110,10 @@ nissues = 5
 
 m = pla.initialize_model(1000,nissues,
                          ncandidates, δ = 1)
+
+foreach(Pkg.add, (  "GLMakie", "InteractiveDynamics"))
+
+
 
 m[1] |> typeof |> fi
 

@@ -85,12 +85,20 @@ end
 function set_candidates!(partiesposs,
                          model::abm.ABM)
     δ = model.properties[:δ]
-    getcandidateid(party)= sample(collect(
+    function getcandidateid(party)
+        try
+        sample(collect(
         abm.nearby_ids(model[party],
                        model,
                        δ,
                        exact = true)))
-
+        catch _
+                    sample(collect(abm.nearby_ids(model[party],
+                       model,
+                       1.,
+                                                  exact = true)))
+        end
+    end
     candidatepartypairs = []
 
     for (pid,pvalue) in partiesposs
@@ -443,7 +451,6 @@ candidate.
 the candidate of their party.
 =#
 
-
 function HaveIVotedAgainstMyParty(agentid::Int, model)
     mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
     mycandidate = get_whichCandidatePartyAgentVotesfor(agentid, model)[1]
@@ -476,7 +483,6 @@ end
 
 get_distance_IvsPartyCandidate(agent::Voter,model) = get_distance_IvsPartyCandidate(agent.id,model)
 get_distance_MyCandidatevsPartyCandidate(agent::Voter, model) = get_distance_MyCandidatevsPartyCandidate(agent.id, model)
-
 
 
 function get_representativeness(m::abm.ABM)
@@ -535,13 +541,15 @@ end
 
 # end
 
-function boundsdict_toparamsdf(varnames, bounds;samplesize= 2^7)
-    saltelli = pyimport("SALib.sample.saltelli")
-    function saltellidict(varnames::Vector{String}, bounds)
+function saltellidict(varnames::Vector{String}, bounds)
         Dict("names" => varnames,
              "bounds" => PythonCall.PyList(bounds),
              "num_vars" => length(varnames))
     end
+
+
+function boundsdict_toparamsdf(varnames, bounds;samplesize= 2^8)
+    saltelli = pyimport("SALib.sample.saltelli")
 
     boundsdict = saltellidict(varnames, bounds)
 
@@ -608,7 +616,6 @@ function run_analysis(sim_cons, dm, threadId)
         end
     end
 end
-
 
 
 

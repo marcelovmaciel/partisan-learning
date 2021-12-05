@@ -11,8 +11,10 @@ import CSV
 #                     conda_packages = ["SALib"]
 #                     )
 
+
 varnames =  ["ncandidates",  "κ", "δ"]
 bounds = [[2.,15.], [0.,7.], [0.5,7.] ]
+
 
 design_matrix = pla.boundsdict_toparamsdf(varnames, bounds)
 
