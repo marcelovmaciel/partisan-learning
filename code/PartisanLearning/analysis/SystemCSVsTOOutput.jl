@@ -12,11 +12,11 @@ using Base.Filesystem
 #                     conda_packages = ["SALib"]
 #                     )
 
-results = [pla.get_ParametizationMeasuresMeans(p) for p in 1:1024]
+results = [pla.get_ParametizationMeasuresMeans(p) for p in 1:2048]
 
 output_matrix = vcat(results...)
 
-
+output_matrix
 
 CSV.write(joinpath(pla.datapath,"output_matrix.csv"),
           output_matrix)

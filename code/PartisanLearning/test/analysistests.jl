@@ -43,9 +43,8 @@ PythonCall.PyArray(outputmatrix[!,outputnames[1]], array = true).size
 sio = hcat(designmatrix,outputmatrix)
 
 
-
-
-
+designmatrix
+outputmatrix
 
 function scatter_grid(inputvar,whichf, data = sio)
     f = Figure()

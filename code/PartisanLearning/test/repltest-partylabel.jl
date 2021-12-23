@@ -16,7 +16,7 @@ import Distances
 
 
 # ** Try to analyze
-ncandidates = 15
+ncandidates = 5
 nissues = 2
 
 m = pla.initialize_model(500,nissues,
@@ -56,9 +56,6 @@ fig,adf,mdf = abm_data_exploration(m,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1 )
 
-
-
-
 # TODO: think about this weird behavior in which people switch
 # more than they vote against their party
 # Maybe I'm doing some mistake on counting the switches
@@ -71,17 +68,19 @@ k =  collect(keys(foo.val))
 pie(fig[1,3], [foo.val[v] for v in k], color = k, radius = 5, inner_radius = 2)
              end
 
+
+
+
+partyproportions = pla.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
+partyids = collect(keys(partyproportions))
+foo = Observable([partyproportions[p] for p in partyids])
+
+
 function newstep(m, foo = foo)
     pla.model_step!(m)
-    foo[] = m.properties[:withinpartyshares][296]
-
+    partyproportions = pla.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
+    foo[] = [partyproportions[p] for p in partyids]
 end
-
-partyids = collect(keys(partyproportions))
-partyproportions = pla.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
-
-
-barplot(partyids, [partyproportions[p] for p in partyids])
 
 
 
@@ -94,12 +93,7 @@ fig,adf,mdf = abm_data_exploration(m,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1 )
 
-
-pltfn(foo)
-
-pie(m.properties[:withinpartyshares][296]|>values)
-
-pie(1:5)
+barplot(fig[1,3], 1:length(partyids), foo)
 
 
 # ** Other tests
