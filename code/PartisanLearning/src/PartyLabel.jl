@@ -69,6 +69,7 @@ function Voter(id::Int,nissues =  1,
     return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
 end
 
+
 function sample_parties_pos(nparties, model)
     ids = collect(abm.allids(model))
 
@@ -82,9 +83,52 @@ function sample_parties_pos(nparties, model)
     return(actualpartiesposs)
 end
 
+
+function dictmap(d,l)
+    Dict(Pair(k,l(v)) for (k,v) in d)
+end
+
+
+function select_primariesCandidates(partiesposs,
+                         model::abm.ABM)
+    δ = model.properties[:δ]
+
+    function getcandidateid(party)
+
+        try
+
+            sample(collect(abm.nearby_ids(model[party],
+                                          model, δ, exact = true)),4)
+
+        catch _
+            sample(collect(abm.nearby_ids(model[party],
+                                          model,
+                                          1.,
+                                          exact = true)),4)
+        end
+    end
+
+    party_candidate_pairs = Pair{Int64, Vector{Int64}}[]
+    for pid in keys(partiesposs)
+        # this allows me use it in the initial condition without any problem
+        if model.properties[:incumbent] == 0
+            push!(party_candidate_pairs,
+                  Pair(pid, getcandidateid(pid)))
+        elseif pid == model[model.properties[:incumbent]].myPartyId
+            # this one helps me to jump the incumbent after the initial condition
+            continue
+        else
+            push!(party_candidate_pairs, Pair(pid, getcandidateid(pid)))
+        end
+    end
+    return(Dict(party_candidate_pairs))
+end
+
+
 function set_candidates!(partiesposs,
                          model::abm.ABM)
     δ = model.properties[:δ]
+
     function getcandidateid(party)
         try
         sample(collect(
@@ -99,19 +143,18 @@ function set_candidates!(partiesposs,
                                                   exact = true)))
         end
     end
+
     candidatepartypairs = []
 
     for (pid,pvalue) in partiesposs
         # this allows me use it in the initial condition without any problem
         if model.properties[:incumbent] == 0
-            #println(getcandidateid(pvalue[:partyposition]),  " ", pid)
             push!(candidatepartypairs,
                   Pair(getcandidateid(pid),pid))
         # this one helps me to jump the incumbent after the initial condition
         elseif pid == model[model.properties[:incumbent]].myPartyId
                 continue
         else
-            #println(getcandidateid(pvalue[:partyposition]), " ", pid)
             push!(candidatepartypairs,
                   Pair(getcandidateid(pid),
                        pid))
@@ -119,7 +162,7 @@ function set_candidates!(partiesposs,
     end
 
     candidateids =  Dict(candidatepartypairs)
-    # println(candidatepartypairs) # BUG: THIS IS WRONG. The candidate id CANNOT be the same as the party for christ sake
+
 
     for (candidateid, pid) in candidateids
 
@@ -128,8 +171,6 @@ function set_candidates!(partiesposs,
         partiesposs[pid][:partycandidate] = candidateid
     end
 end
-
-
 
 function set_candidates!(model::abm.ABM)
     set_candidates!(model.properties[:partiesposs],
@@ -166,6 +207,34 @@ function get_closest_candidate(agentid::Int,model)
     end
     return(candidateid,itspartyid)
 end
+
+
+function get_closest_fromList(agentid,candidate_list,model)
+    dummydistance = 100000.
+    candidateid = -1
+    for candidate in candidate_list
+    candidatepos = model[candidate].pos
+    distance = dist.euclidean(candidatepos,
+                              model[agentid].pos)
+        if distance < dummydistance
+            dummydistance = distance
+            candidateid = candidate
+        end
+    end
+    return(candidateid)
+end
+
+
+function get_primaries_votes(m, primariesCandidatesDict)
+    parties_supporters = get_parties_supporters(m)
+    get_closest_toI(i) = get_closest_fromList(i,
+                         primariesCandidatesDict[m[i].myPartyId],
+                                              m)
+    delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
+    dictmap(parties_supporters, supporters->map(get_closest_toI,supporters))
+
+end
+
 
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
@@ -679,6 +748,9 @@ end
 
 # TODO: try to visualize how myPartyId evolves!
 # TODO: withipartyshares could be an evolving barplot
-# TODO: write my own fucking visualization loop
+
+# TODO: change how parties choose their candidates: Sample four then use two
+# different methods! Keep randomness. Thus I'll have a procedure with a switch
+# with three options (random, plurality, runoff)
 
 end  # this is where the module ends!!!

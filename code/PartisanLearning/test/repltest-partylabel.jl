@@ -22,6 +22,55 @@ nissues = 2
 m = pla.initialize_model(500,nissues,
                          ncandidates, δ = 3.)
 
+foo = Dict(pla.select_primariesCandidates(m.properties[:partiesposs],m))
+parties = collect(keys(foo))
+
+pla.dictmap(foo, x->100 .* x)
+
+pla.get_primaries_votes(m,foo)
+
+
+
+#Remember: INCUMBENT IS THE CANDIDATE!!!!!!!
+
+delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
+pla.dictmap(parties_supporters,
+        supporters->map( i ->pla.get_closest_fromList(i,
+                                                      foo[m[i].myPartyId], m)
+                         ,supporters))
+
+
+
+
+map(i->pla.get_closest_fromList(i, foo[m[i].myPartyId], m), parties_supporters[243])
+
+parties_supporters
+
+foo
+
+m.properties[:partiesposs]
+
+pla.dictmap(parties_supporters,
+        supporters->map( i ->pla.get_closest_fromList(i,
+                                                      foo[m[i].myPartyId], m)
+                         ,supporters))
+
+
+parties[1]
+
+#=
+- I sweep over agents
+- Agents tell which one is closer to them
+- I keep track of that
+- I calculate the proportions
+=#
+
+m.properties
+
+m.properties[:voters_partyids]
+
+foo |> typeof
+
 params = Dict(:κ => 0.0:1.:7,
               :δ => 0.5:0.5:7)
 
