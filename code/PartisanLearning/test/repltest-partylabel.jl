@@ -22,13 +22,70 @@ nissues = 2
 m = pla.initialize_model(500,nissues,
                          ncandidates, δ = 3.)
 
-foo = Dict(pla.select_primariesCandidates(m.properties[:partiesposs],m))
-parties = collect(keys(foo))
-
-pla.dictmap(foo, x->100 .* x)
+foo = pla.select_primariesCandidates(m.properties[:partiesposs],m)
 
 pla.get_primaries_votes(m,foo)
 
+
+
+foo2 = pla.dictmap(pla.proportionmap,pla.get_primaries_votes(m,foo))
+
+function get_plurality_result(primariesresult)
+    pla.dictmap(argmax ∘ pla.proportionmap, primariesresult)
+end
+
+
+function get_runoff_result(primariesresult)
+    primariesproportion = pla.dictmap(pla.proportionmap
+                                  ,primariesresult)
+    function runoff(k,v)
+             if any(x->x>0.5,values(v))
+                 argmax(v)
+             else
+                 toptwo = sort(collect(v),
+                               by=x->x[2],
+                               rev = true)[1:2] .|> x->x[1]
+                 (map(x->pla.get_closest_fromList(x,toptwo,m),
+                  pla.get_parties_supporters(m)[k]) |>
+                      pla.proportionmap |>
+                      argmax)
+             end
+    end
+
+    pla.kvdictmap(runoff, primariesproportion)
+end
+
+
+
+
+get_plurality_result(pla.get_primaries_votes(m,foo))
+get_runoff_result(pla.get_primaries_votes(m,foo))
+
+
+primariesproportion = pla.dictmap(pla.proportionmap,pla.get_primaries_votes(m,foo))
+
+
+
+for (k,v) in primariesproportion
+    Dict(if any(x->x>0.5,values(v))
+             argmax(v)
+         else
+             toptwo = sort(collect(v),
+                           by=x->x[2],
+                           rev = true)[1:2] .|> x->x[1]
+             (map(x->pla.get_closest_fromList(x,toptwo,m),
+                  pla.get_parties_supporters(m)[k]) |>
+                      pla.proportionmap |>
+                      argmax)
+         end)
+
+end
+if any(x->x>0.5,values(v))
+             argmax(v)
+else
+    primariesproportion[405]
+
+foo2[184] |> argmax
 
 
 #Remember: INCUMBENT IS THE CANDIDATE!!!!!!!
@@ -38,9 +95,6 @@ pla.dictmap(parties_supporters,
         supporters->map( i ->pla.get_closest_fromList(i,
                                                       foo[m[i].myPartyId], m)
                          ,supporters))
-
-
-
 
 map(i->pla.get_closest_fromList(i, foo[m[i].myPartyId], m), parties_supporters[243])
 

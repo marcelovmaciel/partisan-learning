@@ -84,8 +84,12 @@ function sample_parties_pos(nparties, model)
 end
 
 
-function dictmap(d,l)
+function dictmap(l,d)
     Dict(Pair(k,l(v)) for (k,v) in d)
+end
+
+function kvdictmap(l,d)
+    Dict(Pair(k,l(k,v)) for (k,v) in d)
 end
 
 
@@ -231,7 +235,7 @@ function get_primaries_votes(m, primariesCandidatesDict)
                          primariesCandidatesDict[m[i].myPartyId],
                                               m)
     delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
-    dictmap(parties_supporters, supporters->map(get_closest_toI,supporters))
+    dictmap(supporters->map(get_closest_toI,supporters), parties_supporters)
 
 end
 
