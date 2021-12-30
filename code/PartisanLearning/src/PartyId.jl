@@ -69,6 +69,7 @@ function get_closest_candidate(agentid::Int,model, mypos_or_partypos = :pos)
     there can be no such thing. Thus, it will warn me downstream
     if any mistake has happened here.
     =#
+
     dummydistance = 100.
     dummyid = -2
     for i in abm.allids(model)     #pid.abm.nearby_ids(model[testid].pos, model)

@@ -97,36 +97,99 @@ function select_primariesCandidates(partiesposs,
                          model::abm.ABM)
     δ = model.properties[:δ]
 
-    function getcandidateid(party)
+    parties_supporters = get_parties_supporters(model)
 
-        try
-
-            sample(collect(abm.nearby_ids(model[party],
-                                          model, δ, exact = true)),4)
-
-        catch _
-            sample(collect(abm.nearby_ids(model[party],
-                                          model,
-                                          1.,
-                                          exact = true)),4)
-        end
+    function getcandidateid(party, parties_supporters)
+        sample(parties_supporters[party],4)
     end
 
     party_candidate_pairs = Pair{Int64, Vector{Int64}}[]
+
+    # FIXME: simplify with kdictmap
     for pid in keys(partiesposs)
         # this allows me use it in the initial condition without any problem
         if model.properties[:incumbent] == 0
             push!(party_candidate_pairs,
-                  Pair(pid, getcandidateid(pid)))
+                  Pair(pid, getcandidateid(pid,parties_supporters)))
         elseif pid == model[model.properties[:incumbent]].myPartyId
             # this one helps me to jump the incumbent after the initial condition
             continue
         else
-            push!(party_candidate_pairs, Pair(pid, getcandidateid(pid)))
+            push!(party_candidate_pairs,
+                  Pair(pid, getcandidateid(pid,
+                                           parties_supporters)))
         end
     end
     return(Dict(party_candidate_pairs))
 end
+
+
+function get_plurality_result(primariesresult::Dict)
+    dictmap(argmax ∘ proportionmap, primariesresult)
+end
+
+
+function get_plurality_result(m::abm.ABM)
+    candidates = select_primariesCandidates(m.properties[:partiesposs],m)
+    primariesresult = get_primaries_votes(m,candidates)
+    get_plurality_result(primariesresult)
+end
+
+
+function get_runoff_result(primariesresult,m)
+    primariesproportion = dictmap(proportionmap
+                                  ,primariesresult)
+    function runoff(k,v)
+             if any(x->x>0.5,values(v))
+                 argmax(v)
+             else
+                 toptwo = sort(collect(v),
+                               by=x->x[2],
+                               rev = true)[1:2] .|> x->x[1]
+                 (map(x->get_closest_fromList(x,toptwo,m),
+                  get_parties_supporters(m)[k]) |>
+                      proportionmap |>
+                      argmax)
+             end
+    end
+    kvdictmap(runoff, primariesproportion)
+end
+
+
+function get_runoff_result(m)
+    candidates = select_primariesCandidates(m.properties[:partiesposs],m)
+    primariesresult = get_primaries_votes(m,candidates)
+
+    get_runoff_result(primariesresult,m)
+end
+
+function get_random_candidates(m)
+    dictmap(rand,get_parties_supporters(m))
+
+    end
+
+
+# TODO: replace the old one downstream
+function new_set_candidates!(model, switch)
+
+    if switch == :runoff
+        candidateids = get_runoff_result(model)
+    elseif switch == :plurality
+        candidateids = get_plurality_result(model)
+    else
+        candidateids = get_random_candidates(model)
+    end
+
+
+    for (pid, candidateid) in candidateids
+
+        model[candidateid].amIaCandidate = true
+        model[candidateid].myPartyId = pid
+        model.properties[:partiesposs][pid][:partycandidate] = candidateid
+    end
+
+end
+
 
 
 function set_candidates!(partiesposs,
@@ -185,9 +248,7 @@ end
 
 "get_closest_candidate(agentid::Int, model::abm.ABM)"
 function get_closest_candidate(agentid::Int,model)
-    #=
-    In this function the optional argument must the field of position that the function must calculate! Either the agents' position or its partyid position!
-    =#
+
     #=
     Those are dummy variables. In the first loop iteration
     they are replaced. Since the bounds: (0,1) there is no
