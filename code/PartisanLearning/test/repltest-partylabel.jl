@@ -22,17 +22,31 @@ nissues = 2
 m = pla.initialize_model(500,nissues,
                          ncandidates, δ = 3.)
 
+
+typeof(m)
+pla.get_parties_supporters(m)
+
 foo = pla.select_primariesCandidates(m.properties[:partiesposs],m)
+
+
+
+pla.new_set_candidates!(m,:runoff)
+
+
+
+
+
 
 pla.get_primaries_votes(m,foo)
 
 foo2 = pla.dictmap(pla.proportionmap,pla.get_primaries_votes(m,foo))
 
 
+pla.get_primaries_votes(m,foo)
+pla.get_plurality_result(pla.get_primaries_votes(m,foo))
+pla.get_runoff_result(pla.get_primaries_votes(m,foo),m)
 
-get_plurality_result(pla.get_primaries_votes(m,foo))
-get_runoff_result(pla.get_primaries_votes(m,foo),m)
-
+pla.get_random_supporter(m)
 
 
 #Remember: INCUMBENT IS THE CANDIDATE!!!!!!!

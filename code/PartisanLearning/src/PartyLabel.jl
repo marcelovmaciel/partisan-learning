@@ -336,11 +336,10 @@ function get_withinpartyshares(model)
     Naturally, it **ONLY MAKES SENSE** if I update
     model.properties[:voterBallotTracker] before using it!!!!=#
     parties_supporters = get_parties_supporters(model)
-    withinpartyvotes = Dict(
-        Pair(k,
-             map(x-> model.properties[:voterBallotTracker][x][end],v))
-        for (k,v) in parties_supporters)
-   Dict(Pair(k,proportionmap(v)) for (k,v) in withinpartyvotes)
+    withinpartyvotes = dictmap(v-> map(x-> model.properties[:voterBallotTracker][x][end],
+                                       v),
+                               parties_supporters)
+   return(dictmap(proportionmap, withinpartyvotes))
 end
 
 
@@ -418,6 +417,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                        end
     model.properties[:partiesposs] = sample_parties_pos(nparties,
                                                         model)
+    # TODO: voters should have parties before the candidates are chosen
+
     set_candidates!(model)
 
     new_incumbent = getmostvoted(model)
