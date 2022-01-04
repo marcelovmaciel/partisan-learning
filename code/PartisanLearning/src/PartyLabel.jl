@@ -69,27 +69,24 @@ function Voter(id::Int,nissues =  1,
     return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
 end
 
-
-function sample_parties_pos(nparties, model)
-    ids = collect(abm.allids(model))
-
-    partiesposs = Dict(map(x-> (x,model[x].pos),
-                           sample(ids,nparties, replace = false)))
-    actualpartiesposs = Dict(
-        Pair(k,
-             Dict(:partyposition => v,
-                  :partycandidate => -1 ))
-        for (k,v) in partiesposs)
-    return(actualpartiesposs)
-end
-
-
  function dictmap(l,d)
     Dict(Pair(k,l(v)) for (k,v) in d)
 end
 
 function kvdictmap(l,d)
     Dict(Pair(k,l(k,v)) for (k,v) in d)
+end
+
+
+function sample_parties_pos(nparties, model)
+    ids = collect(abm.allids(model))
+
+    partiesposs = Dict(map(x-> (x,model[x].pos),
+                           sample(ids,nparties, replace = false)))
+    actualpartiesposs = dictmap(v-> Dict(:partyposition => v,
+                                         :partycandidate => -1 ),
+                                partiesposs)
+    return(actualpartiesposs)
 end
 
 
@@ -462,7 +459,6 @@ function reset_candidates!(model::abm.ABM)
     end
     model[model.properties[:incumbent]].amIaCandidate = true
 end
-
 
 "candidates_iteration_setup!(model::abm.ABM)"
 function candidates_iteration_setup!(m::abm.ABM)
