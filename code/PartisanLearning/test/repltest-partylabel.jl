@@ -23,12 +23,25 @@ m = pla.initialize_model(500,nissues,
                          ncandidates, δ = 3.)
 
 
+sum([pla.get_closest_fromList(i,collect(keys(m.properties[:partiesposs])),m) == m[i].myPartyId for i in pla.abm.allids(m)])
+
+
+m[1]
+
+collect(keys(m.properties[:partiesposs]))
+
+
+
+
+pla.get_runoff_result(m)
+
+
 typeof(m)
 pla.get_parties_supporters(m)
 
 foo = pla.select_primariesCandidates(m.properties[:partiesposs],m)
 
-
+print
 
 pla.new_set_candidates!(m,:runoff)
 

@@ -84,7 +84,7 @@ function sample_parties_pos(nparties, model)
 end
 
 
-function dictmap(l,d)
+ function dictmap(l,d)
     Dict(Pair(k,l(v)) for (k,v) in d)
 end
 
@@ -409,6 +409,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :incumbent_streak_counter => DummyStreakCounter(),
                       :party_switches => [0],
                       :median_pos => [])
+
     model = abm.ABM(Voter{nissues}, space; rng,properties = properties)
 
     for i in 1:nagents
@@ -417,16 +418,22 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                        end
     model.properties[:partiesposs] = sample_parties_pos(nparties,
                                                         model)
-    # TODO: voters should have parties before the candidates are chosen
 
+
+    for i in abm.allids(model)
+        mypartyid = get_closest_fromList(i,collect(keys(model.properties[:partiesposs])),model)
+        model[i].myPartyId = mypartyid
+    end
+
+# TODO: chagne here the set_candidates version
     set_candidates!(model)
 
     new_incumbent = getmostvoted(model)
 
-    for i in abm.allids(model)
-        mypartyid = get_closest_candidate(i,model)[2]
-        model[i].myPartyId = mypartyid
-    end
+    # for i in abm.allids(model)
+    #     mypartyid = get_closest_candidate(i,model)[2]
+    #     model[i].myPartyId = mypartyid
+    # end
 
     model.properties[:incumbent] = new_incumbent
     initialize_incumbent_streak_counter!(model)
