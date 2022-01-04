@@ -92,7 +92,6 @@ end
 
 function select_primariesCandidates(partiesposs,
                          model::abm.ABM)
-    δ = model.properties[:δ]
 
     parties_supporters = get_parties_supporters(model)
 
@@ -160,14 +159,14 @@ function get_runoff_result(m)
     get_runoff_result(primariesresult,m)
 end
 
+
 function get_random_candidates(m)
     dictmap(rand,get_parties_supporters(m))
-
-    end
+end
 
 
 # TODO: replace the old one downstream
-function new_set_candidates!(model, switch)
+function set_candidates!(model, switch)
 
     if switch == :runoff
         candidateids = get_runoff_result(model)
@@ -186,61 +185,6 @@ function new_set_candidates!(model, switch)
     end
 
 end
-
-
-
-function set_candidates!(partiesposs,
-                         model::abm.ABM)
-    δ = model.properties[:δ]
-
-    function getcandidateid(party)
-        try
-        sample(collect(
-        abm.nearby_ids(model[party],
-                       model,
-                       δ,
-                       exact = true)))
-        catch _
-                    sample(collect(abm.nearby_ids(model[party],
-                       model,
-                       1.,
-                                                  exact = true)))
-        end
-    end
-
-    candidatepartypairs = []
-
-    for (pid,pvalue) in partiesposs
-        # this allows me use it in the initial condition without any problem
-        if model.properties[:incumbent] == 0
-            push!(candidatepartypairs,
-                  Pair(getcandidateid(pid),pid))
-        # this one helps me to jump the incumbent after the initial condition
-        elseif pid == model[model.properties[:incumbent]].myPartyId
-                continue
-        else
-            push!(candidatepartypairs,
-                  Pair(getcandidateid(pid),
-                       pid))
-        end
-    end
-
-    candidateids =  Dict(candidatepartypairs)
-
-
-    for (candidateid, pid) in candidateids
-
-        model[candidateid].amIaCandidate = true
-        model[candidateid].myPartyId = pid
-        partiesposs[pid][:partycandidate] = candidateid
-    end
-end
-
-function set_candidates!(model::abm.ABM)
-    set_candidates!(model.properties[:partiesposs],
-                    model::abm.ABM)
-end
-
 
 
 "get_closest_candidate(agentid::Int, model::abm.ABM)"
@@ -292,8 +236,14 @@ function get_primaries_votes(m, primariesCandidatesDict)
     get_closest_toI(i) = get_closest_fromList(i,
                          primariesCandidatesDict[m[i].myPartyId],
                                               m)
-    delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
-    dictmap(supporters->map(get_closest_toI,supporters), parties_supporters)
+    if m.properties[:incumbent] == 0
+        dictmap(supporters->map(get_closest_toI,supporters),
+                parties_supporters)
+    else
+        delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
+        dictmap(supporters->map(get_closest_toI,supporters),
+                parties_supporters)
+    end
 
 end
 
@@ -370,10 +320,10 @@ function get_median_pos(m)
  end
 
 
-# TODO: Check if this is indeed correct
-"initialize_model(nagents::Int, nissues::Int, ncandidates::Int)"
+
+
 function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 2.,  δ=1.,  seed = 125)
+                          κ = 2.,  switch= :random,  seed = 125)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues), periodic = false)
     rng = Random.MersenneTwister(seed)
     # postype = typeof(ntuple(x -> 1.,nissues))
@@ -398,7 +348,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :nissues => nissues,
                       :ncandidates => nparties,
                       :partiesposs => partiesposs,
-                      :δ => δ,
+                      :switch => switch,
                       :κ => κ,
                       :voters_partyids => voters_partyids,
                       :voterBallotTracker=>voterBallotTracker,
@@ -416,14 +366,17 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     model.properties[:partiesposs] = sample_parties_pos(nparties,
                                                         model)
 
-
     for i in abm.allids(model)
         mypartyid = get_closest_fromList(i,collect(keys(model.properties[:partiesposs])),model)
         model[i].myPartyId = mypartyid
     end
+    model.properties[:voters_partyids] = Dict(
+        (model[x].id => model[x].myPartyId)
+        for x in abm.allids(model))
+
 
 # TODO: chagne here the set_candidates version
-    set_candidates!(model)
+    set_candidates!(model, switch)
 
     new_incumbent = getmostvoted(model)
 
@@ -434,15 +387,14 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
 
     model.properties[:incumbent] = new_incumbent
     initialize_incumbent_streak_counter!(model)
-    model.properties[:voters_partyids] = Dict((model[x].id => model[x].myPartyId)
-                                       for x in abm.allids(model))
     model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:voters_partyids])
     model.properties[:withinpartyshares] = get_withinpartyshares(model)
     model.properties[:median_pos] = get_median_pos(model)
     return(model)
 end
 
-
+#Remember: INCUMBENT IS THE CANDIDATE!!!!!!!
+# TODO: CHECK the incumbent behavior throughout the code for fuck sake !!!!
 # ** Stepping
 #=
 there is some sublety here.
@@ -463,7 +415,7 @@ end
 "candidates_iteration_setup!(model::abm.ABM)"
 function candidates_iteration_setup!(m::abm.ABM)
     reset_candidates!(m)
-    set_candidates!( m)
+    set_candidates!(m, m.properties[:switch])
 end
 
 
