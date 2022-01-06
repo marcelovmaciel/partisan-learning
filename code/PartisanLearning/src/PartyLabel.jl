@@ -165,7 +165,7 @@ function get_random_candidates(m)
 end
 
 
-# TODO: replace the old one downstream
+
 function set_candidates!(model, switch)
 
     if switch == :runoff
@@ -375,7 +375,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
         for x in abm.allids(model))
 
 
-# TODO: chagne here the set_candidates version
+
     set_candidates!(model, switch)
 
     new_incumbent = getmostvoted(model)
@@ -767,11 +767,9 @@ function get_ParametizationMeasuresMeans(whichparametrization)
 end
 
 
-# TODO: try to visualize how myPartyId evolves!
-# TODO: withipartyshares could be an evolving barplot
-
-# TODO: change how parties choose their candidates: Sample four then use two
-# different methods! Keep randomness. Thus I'll have a procedure with a switch
-# with three options (random, plurality, runoff)
+# TODO: change parties' position too
+# TODO: Turn visualization code into a function
+# TODO: Check performance
+# TODO: Turn all dict calls into simple mutating static arrays
 
 end  # this is where the module ends!!!
