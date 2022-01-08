@@ -40,6 +40,7 @@ using Random
 import CSV
 using ProgressMeter
 
+
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
@@ -161,7 +162,15 @@ end
 
 
 function get_random_candidates(m)
-    dictmap(rand,get_parties_supporters(m))
+    parties_supporters = get_parties_supporters(m)
+        if m.properties[:incumbent] == 0
+            dictmap(rand,parties_supporters)
+    else
+        delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
+        dictmap(rand,
+                parties_supporters)
+
+    end
 end
 
 
@@ -300,7 +309,6 @@ end
 DummyStreakCounter() = StreakCounter(1,Vector{Bool}(), 0, Dict(:streak_value => 0,
                                                                 :incumbent_pos => (0,)))
 
-
 function initialize_incumbent_streak_counter!(m)
     m.properties[:incumbent_streak_counter].old_incumbentholder = m.properties[:incumbent]
     m.properties[:incumbent_streak_counter].current_streak = 1
@@ -319,9 +327,6 @@ function get_median_pos(m)
     return(medians)
  end
 
-
-
-
 function initialize_model(nagents::Int, nissues::Int, nparties;
                           κ = 2.,  switch= :random,  seed = 125)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues), periodic = false)
@@ -337,6 +342,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     voters_partyids = Dict{Int64, Int64}()
     voterBallotTracker = Dict{Int64, Vector{Int}}()
     partiesposs = Dict{}()
+# TODO: Add a partiesids property
+# This will allow me to stop recalculating it from partiesposs
     withinpartyshares = Dict{}()
     #=
     I am adding that as a model property to later:
@@ -771,5 +778,11 @@ end
 # TODO: Turn visualization code into a function
 # TODO: Check performance
 # TODO: Turn all dict calls into simple mutating static arrays
+
+
+
+
+
+
 
 end  # this is where the module ends!!!

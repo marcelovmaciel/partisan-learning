@@ -11,21 +11,22 @@ const pla = pl.PartyLabel
 using GLMakie
 using Agents
 import Distances
-include("visualize_model.jl")
+include("../test/visualize_model.jl")
 # ** Try to analyze
 
 ncandidates = 2
 nissues = 2
 
 m = pla.initialize_model(500,nissues,
-                         ncandidates, switch = :runoff)
+                         ncandidates, switch = :random)
 visualize_model(m)
 
-# BUG: a party pops up all of a sudden if I start with switch == runoff
+
+
 
 m.properties[:partiesposs]
 
-
+pla.get_parties_supporters(m)
 
 # ** Other tests
 
