@@ -68,7 +68,3 @@ SCHEDULED: <2021-08-06 sex>
 
 * [X] Optimize the code;
 * DONE Code a sensitivity analysis.
-
-
-* TODO [#A] Relate Party Movement to the primaries
-that is if win move in the direction of Winner if lose move in the Opposite direction

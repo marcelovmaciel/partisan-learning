@@ -23,7 +23,6 @@ visualize_model(m)
 
 
 
-
 m.properties[:partiesposs]
 
 pla.get_parties_supporters(m)
