@@ -17,13 +17,13 @@ include("../test/visualize_model.jl")
 ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(500,nissues,
-                         ncandidates, switch = :random)
+m = pla.initialize_model(500,nissues, ncandidates, δ=50, switch = :plurality)
+
+
 visualize_model(m)
 
-m[1].pos
 
-m.properties[:partiesposs]
+m.properties[:parties_candidateid_ppos]
 
 pla.get_parties_supporters(m)
 

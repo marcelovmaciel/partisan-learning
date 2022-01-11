@@ -107,7 +107,7 @@ end
 function select_primariesCandidates(model::abm.ABM)
 
     party_candidate_pairs = Pair{Int64, Vector{Int64}}[]
-
+    # FIXME: add a conditional that the candidate should be from the party
     # FIXME: simplify with kdictmap
     for pid in model.properties[:parties_ids]
         # this allows me use it in the initial condition without any problem
@@ -136,7 +136,6 @@ function get_plurality_result(m::abm.ABM)
     primariesresult = get_primaries_votes(m,candidates)
     get_plurality_result(primariesresult)
 end
-
 
 function get_runoff_result(primariesresult,m)
     primariesproportion = dictmap(proportionmap
@@ -192,7 +191,7 @@ function set_candidates!(model, switch)
 
         model[candidateid].amIaCandidate = true
         model[candidateid].myPartyId = pid
-        model.properties[:partiesposs][pid][:partycandidate] = candidateid
+        model.properties[:parties_candidateid_ppos][pid][:partycandidate] = candidateid
     end
 
 end
@@ -344,10 +343,10 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     =#
     voters_partyids = Dict{Int64, Int64}()
     voterBallotTracker = Dict{Int64, Vector{Int}}()
-    partiesposs = Dict{}()
+    parties_candidateid_ppos = Dict{}()
     parties_ids = Vector{Int}(undef,nparties)
-# TODO: Add a partiesids property
-# This will allow me to stop recalculating it from partiesposs
+
+# This will allow me to stop recalculating it from parties_candidateid_ppos
     withinpartyshares = Dict{}()
     #=
     I am adding that as a model property to later:
@@ -359,7 +358,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :nissues => nissues,
                       :ncandidates => nparties,
                       :parties_ids => parties_ids,
-                      :partiesposs => partiesposs,
+                      :parties_candidateid_ppos => parties_candidateid_ppos,
                       :δ => δ,
                       :switch => switch,
                       :κ => κ,
@@ -376,9 +375,9 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
         vi = Voter(i, nissues)
                        abm.add_agent_pos!(vi, model)
                        end
-    model.properties[:partiesposs] = sample_parties_pos(nparties,
+    model.properties[:parties_candidateid_ppos] = sample_parties_pos(nparties,
                                                         model)
-    for (i,v) in enumerate(collect(keys(model.properties[:partiesposs])))
+    for (i,v) in enumerate(collect(keys(model.properties[:parties_candidateid_ppos])))
         model.properties[:parties_ids][i]=v
     end
 
@@ -436,7 +435,7 @@ function get_whichCandidatePartyAgentVotesfor(agentid, model)
 
     closest_to_me_id_pid = get_closest_candidate(agentid,model)
 
-    mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
+    mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
 
     whoillvotefor = (mypartycandidate, model[agentid].myPartyId)
 
@@ -511,7 +510,7 @@ function add_partyswitch_tocounter!(i,m)
 end
 
 
-#FIXME: Double-check if I update the model.properties[:partiesposs][:partycandidate]!!!
+#FIXME: Double-check if I update the model.properties[:parties_candidateid_ppos][:partycandidate]!!!
 # I believe it does update with set_candidates! though. Nevertheless, check
 function model_step!(model)
     candidates_iteration_setup!(model)
@@ -554,7 +553,7 @@ the candidate of their party.
 =#
 
 function HaveIVotedAgainstMyParty(agentid::Int, model)
-    mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
+    mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
     mycandidate = get_whichCandidatePartyAgentVotesfor(agentid, model)[1]
     return(mycandidate != mypartycandidate)
 end
@@ -569,7 +568,7 @@ function get_distance_MyCandidatevsPartyCandidate(agentid, model)
 
 
     closest_to_me = get_closest_candidate(agentid,model)[1]
-    mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
+    mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
     two_candidates_distance = dist.euclidean(model[closest_to_me].pos,
                                              model[mypartycandidate].pos)
     return(two_candidates_distance)
@@ -577,7 +576,7 @@ function get_distance_MyCandidatevsPartyCandidate(agentid, model)
 end
 
 function get_distance_IvsPartyCandidate(agentid,model)
-    mypartycandidate = model.properties[:partiesposs][model[agentid].myPartyId][:partycandidate]
+    mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
     dist.euclidean(model[agentid].pos,
                    model[mypartycandidate].pos)
 end
@@ -627,7 +626,7 @@ end
 
 #     xs,ys = begin
 #         poss = [x[:partyposition]
-#                 for x in values(m.properties[:partiesposs])]
+#                 for x in values(m.properties[:parties_candidateid_ppos])]
 #         xs = [x[1] for x in poss]
 #         ys = [x[2] for x in poss]
 #         xs,ys
