@@ -51,12 +51,12 @@ agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
 throughout simulation inspection =#
 end
 
-const bounds = (0,10)
+const bounds = (0,100)
 
 @kwdef struct ModelParams
     nagents = 3000
-    ncandidates = 10
-    nissues = 1
+    ncandidates = 2
+    nissues = 2
     bounds = bounds
     κ = 1. # this influences whether I'll vote against my party or not
     δ = 3. # this influences the radius of candidates a party samples from
@@ -90,31 +90,36 @@ function sample_parties_pos(nparties, model)
     return(actualpartiesposs)
 end
 
+function sample_candidates(party,m,n)
+        δ = m.properties[:δ]
+        try
+            sample(collect(abm.nearby_ids(m[party],
+                       m,
+                       δ,
+                       exact = true)),n)
+        catch _
+                    sample(collect(abm.nearby_ids(m[party],
+                       m,
+                       1., exact = true)),n)
+        end
+end
 
-function select_primariesCandidates(partiesposs,
-                         model::abm.ABM)
-
-    parties_supporters = get_parties_supporters(model)
-
-    function getcandidateid(party, parties_supporters)
-        sample(parties_supporters[party],4)
-    end
+function select_primariesCandidates(model::abm.ABM)
 
     party_candidate_pairs = Pair{Int64, Vector{Int64}}[]
 
     # FIXME: simplify with kdictmap
-    for pid in keys(partiesposs)
+    for pid in model.properties[:parties_ids]
         # this allows me use it in the initial condition without any problem
         if model.properties[:incumbent] == 0
             push!(party_candidate_pairs,
-                  Pair(pid, getcandidateid(pid,parties_supporters)))
+                  Pair(pid, sample_candidates(pid,model,4)))
         elseif pid == model[model.properties[:incumbent]].myPartyId
             # this one helps me to jump the incumbent after the initial condition
             continue
         else
             push!(party_candidate_pairs,
-                  Pair(pid, getcandidateid(pid,
-                                           parties_supporters)))
+                  Pair(pid, sample_candidates(pid,model,4)))
         end
     end
     return(Dict(party_candidate_pairs))
@@ -127,7 +132,7 @@ end
 
 
 function get_plurality_result(m::abm.ABM)
-    candidates = select_primariesCandidates(m.properties[:partiesposs],m)
+    candidates = select_primariesCandidates(m)
     primariesresult = get_primaries_votes(m,candidates)
     get_plurality_result(primariesresult)
 end
@@ -154,13 +159,13 @@ end
 
 
 function get_runoff_result(m)
-    candidates = select_primariesCandidates(m.properties[:partiesposs],m)
+    candidates = select_primariesCandidates(m)
     primariesresult = get_primaries_votes(m,candidates)
 
     get_runoff_result(primariesresult,m)
 end
 
-
+# FIXME: Should create a radius  + m.properties[:parties_ids] version
 function get_random_candidates(m)
     parties_supporters = get_parties_supporters(m)
         if m.properties[:incumbent] == 0
@@ -169,10 +174,8 @@ function get_random_candidates(m)
         delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
         dictmap(rand,
                 parties_supporters)
-
     end
 end
-
 
 function set_candidates!(model, switch)
 
@@ -281,7 +284,7 @@ function get_parties_supporters(model)
         Pair(k,
              collect(keys(filter(t->t[2]==k,
                     model.properties[:voters_partyids]))))
-        for k in keys(model.properties[:partiesposs]))
+        for k in model.properties[:parties_ids])
 end
 
 function get_withinpartyshares(model)
@@ -326,8 +329,9 @@ function get_median_pos(m)
     return(medians)
  end
 
+
 function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 2.,  switch= :random,  seed = 125)
+                          κ = 2., δ=1.,  switch= :random,  seed = 125)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues), periodic = false)
     rng = Random.MersenneTwister(seed)
     # postype = typeof(ntuple(x -> 1.,nissues))
@@ -341,6 +345,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     voters_partyids = Dict{Int64, Int64}()
     voterBallotTracker = Dict{Int64, Vector{Int}}()
     partiesposs = Dict{}()
+    parties_ids = Vector{Int}(undef,nparties)
 # TODO: Add a partiesids property
 # This will allow me to stop recalculating it from partiesposs
     withinpartyshares = Dict{}()
@@ -353,7 +358,9 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :nagents => nagents,
                       :nissues => nissues,
                       :ncandidates => nparties,
+                      :parties_ids => parties_ids,
                       :partiesposs => partiesposs,
+                      :δ => δ,
                       :switch => switch,
                       :κ => κ,
                       :voters_partyids => voters_partyids,
@@ -371,11 +378,15 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                        end
     model.properties[:partiesposs] = sample_parties_pos(nparties,
                                                         model)
+    for (i,v) in enumerate(collect(keys(model.properties[:partiesposs])))
+        model.properties[:parties_ids][i]=v
+    end
 
     for i in abm.allids(model)
-        mypartyid = get_closest_fromList(i,collect(keys(model.properties[:partiesposs])),model)
+        mypartyid = get_closest_fromList(i,model.properties[:parties_ids],model)
         model[i].myPartyId = mypartyid
     end
+
     model.properties[:voters_partyids] = Dict(
         (model[x].id => model[x].myPartyId)
         for x in abm.allids(model))
@@ -385,11 +396,6 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     set_candidates!(model, switch)
 
     new_incumbent = getmostvoted(model)
-
-    # for i in abm.allids(model)
-    #     mypartyid = get_closest_candidate(i,model)[2]
-    #     model[i].myPartyId = mypartyid
-    # end
 
     model.properties[:incumbent] = new_incumbent
     initialize_incumbent_streak_counter!(model)
@@ -805,6 +811,9 @@ function pos_between_partyAndReflectedCandidate(p,c)
 # As usual, check bounds!
 
 end
+
+
+
 
 
 # TODO: Check performance

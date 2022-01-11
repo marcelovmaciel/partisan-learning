@@ -21,7 +21,7 @@ m = pla.initialize_model(500,nissues,
                          ncandidates, switch = :random)
 visualize_model(m)
 
-
+m[1].pos
 
 m.properties[:partiesposs]
 

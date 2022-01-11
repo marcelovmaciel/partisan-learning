@@ -67,4 +67,10 @@ SCHEDULED: <2021-08-06 sex>
 * DONE Write unit*tests for potential bugs;
 
 * [X] Optimize the code;
-* DONE Code a sensitivity analysis.
+* Think about the consistency of the design
+
+The last email got me thinking about the consistency of the design. The
+primaries as they stand lead to party position not mattering since the candidate
+selection is independent from the position of the party. This is a problem. On
+the other hand if I reinstate the radius the size of the radius will probably be
+the main factor... Or maybe not.
