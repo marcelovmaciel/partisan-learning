@@ -74,3 +74,10 @@ primaries as they stand lead to party position not mattering since the candidate
 selection is independent from the position of the party. This is a problem. On
 the other hand if I reinstate the radius the size of the radius will probably be
 the main factor... Or maybe not.
+
+* DONE change voter party update
+* DONE implement party position update!
+
+
+* TODO Fix the initial condition to actually be ONLY an initial condition
+* TODO Then fix the stepping!

@@ -330,7 +330,7 @@ function get_median_pos(m)
 
 
 function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 2., δ=1.,  switch= :random,  seed = 125)
+                          κ = 2., δ=1.,  switch= :random,  seed = 125, ω = 0.8)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues), periodic = false)
     rng = Random.MersenneTwister(seed)
     # postype = typeof(ntuple(x -> 1.,nissues))
@@ -362,6 +362,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :δ => δ,
                       :switch => switch,
                       :κ => κ,
+                      :ω => ω,
                       :voters_partyids => voters_partyids,
                       :voterBallotTracker=>voterBallotTracker,
                       :withinpartyshares => withinpartyshares,
@@ -473,10 +474,13 @@ different from me;
 - I change my party id to this other party with a probability equal to tanh(proportion 1 + proportion 2). =#
 
 
+
 function update_partyid!(agentid,model)
     myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
     proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
+
     proportion_peersUnlikeMe = (1-get_proportion_peers_voteLikeMe(agentid,model))
+
     changechance = (proportion_IvotedForThisParty + proportion_peersUnlikeMe)/2
     if rand() < changechance
         model[agentid].myPartyId = myLast_PartyVote
@@ -509,12 +513,52 @@ function add_partyswitch_tocounter!(i,m)
         end
 end
 
+function get_new_supporters(model, old_supporters)
+    current_supporters = get_parties_supporters(model)
+    new_supporters = kvdictmap((k,v)-> setdiff(v,old_supporters[k]), current_supporters)
+    return(new_supporters)
+end
+
+
+function get_mean_among_supporters(supporters, model)
+        [mean(model[i].pos[issue]
+              for i in supporters)
+         for issue in 1:model.properties[:nissues]]
+end
+
+
+# TODO: IMPLEMENT THIS
+function get_new_parties_poss(model, new_supporters, old_supporters)
+    ω = model.properties[:ω]
+
+    mean_previous_supporters = dictmap(v->get_mean_among_supporters(v,model),
+                                       old_supporters )
+
+    mean_new_supporters = dictmap(v->get_mean_among_supporters(v,model),
+                                  new_supporters)
+
+    kvdictmap((k,v)-> (ω .* v .+ (1-ω) .* mean_new_supporters[k]) |> Tuple, mean_previous_supporters )
+
+end
+
+
+function set_new_parties_poss!(model,newpposs)
+    for (k,v) in newpposs
+        model[k].pos = v
+    end
+
+end
+
+
+
 
 #FIXME: Double-check if I update the model.properties[:parties_candidateid_ppos][:partycandidate]!!!
 # I believe it does update with set_candidates! though. Nevertheless, check
 function model_step!(model)
     candidates_iteration_setup!(model)
 
+
+    old_supporters = get_parties_supporters(model) |> copy
     new_winner = getmostvoted(model, :iteration)
 
     model.properties[:incumbent_streak_counter].old_incumbentholder = model.properties[:incumbent]
@@ -534,6 +578,9 @@ function model_step!(model)
         add_partyswitch_tocounter!(i,model)
         model.properties[:voters_partyids][i] = model[i].myPartyId
     end
+
+    newposs = get_new_parties_poss(model,get_parties_supporters(model), old_supporters )
+    set_new_parties_poss!(model,newposs)
 end
 
 
@@ -562,7 +609,6 @@ end
 HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
 
 #adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
-
 
 function get_distance_MyCandidatevsPartyCandidate(agentid, model)
 

@@ -12,20 +12,23 @@ using GLMakie
 using Agents
 import Distances
 include("../test/visualize_model.jl")
+
 # ** Try to analyze
 
 ncandidates = 2
 nissues = 2
-
 m = pla.initialize_model(500,nissues, ncandidates, δ=50, switch = :plurality)
-
 
 visualize_model(m)
 
 
+
+
+
 m.properties[:parties_candidateid_ppos]
 
-pla.get_parties_supporters(m)
+pla.dictmap(v->pla.get_mean_among_supporters(v,m),
+            pla.get_parties_supporters(m))
 
 # ** Other tests
 
