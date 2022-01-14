@@ -565,6 +565,7 @@ function model_step!(model)
     model.properties[:withinpartyshares] = get_withinpartyshares(model)
 
     push!(model.properties[:party_switches], 0)
+
     #=In this loop agents deal with their new choice
     #of candidate by updating their partyid =#
     for i in abm.allids(model)
@@ -641,7 +642,7 @@ end
 
 function get_partyshare(m)
     if m.properties[:incumbent]== 0
-        Dict(1=>1., 2 => 2. )
+        Dict(1=>1., 2 => 0.5 )
     else
     proportionmap([m.properties[:voterBallotTracker][agentid][end]
                    for agentid in abm.allids(m)])

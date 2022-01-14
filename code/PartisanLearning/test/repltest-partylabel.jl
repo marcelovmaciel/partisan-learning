@@ -22,9 +22,13 @@ m = pla.initialize_model(500,nissues, ncandidates, δ=15, switch = :plurality)
 
 pla.model_step!(m)
 
+m.properties
 
 # FIXME: getting a problem now that initial condition is only initial lol
 visualize_model(m)
+
+
+Dict()
 
 m.properties[:incumbent_streak_counter]
 

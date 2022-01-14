@@ -2,7 +2,8 @@ using InteractiveDynamics
 
 
 function visualize_model(m)
-
+    # FIXME: getting a problem now that initial condition is only initial lol
+    pla.model_step!(m)
 
   params = Dict(:κ => 0.0:1.:7, :switch => [:random, :plurality, :runoff])
 
