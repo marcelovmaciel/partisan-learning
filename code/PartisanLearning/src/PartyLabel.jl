@@ -537,14 +537,12 @@ function get_new_parties_poss(model, new_supporters, old_supporters)
 
 end
 
-
 function set_new_parties_poss!(model,newpposs)
     for (k,v) in newpposs
         model[k].pos = v
         model.properties[:parties_candidateid_ppos][k][:partyposition] = v
     end
 end
-
 
 #FIXME: Double-check if I update the model.properties[:parties_candidateid_ppos][:partycandidate]!!!
 # I believe it does update with set_candidates! though. Nevertheless, check
@@ -580,7 +578,6 @@ end
 
 
 # ** Data Collection
-
 #=
 
 FIXME: Test what happens with the  proportion of voters who voted against PartyId candidate

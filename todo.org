@@ -79,9 +79,7 @@ the main factor... Or maybe not.
 * DONE implement party position update!
 
 
-* TODO Fix the initial condition to actually be ONLY an initial condition
+* DONE Fix the initial condition to actually be ONLY an initial condition
 
-* TODO Then fix the stepping!
-
-* Fix the incumbent behavior
+* TODO Fix the incumbent behavior
 - Right now it is a candidate, turn it into the party
