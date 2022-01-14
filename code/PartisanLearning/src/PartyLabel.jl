@@ -311,10 +311,10 @@ DummyStreakCounter() = StreakCounter(1,Vector{Bool}(), 0, Dict(:streak_value => 
                                                                 :incumbent_pos => (0,)))
 
 function initialize_incumbent_streak_counter!(m)
-    m.properties[:incumbent_streak_counter].old_incumbentholder = m.properties[:incumbent]
-    m.properties[:incumbent_streak_counter].current_streak = 1
-    m.properties[:incumbent_streak_counter].longest_streak[:streak_value] = 1
-    m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent]].pos
+    m.properties[:incumbent_streak_counter].old_incumbentholder = 0
+    m.properties[:incumbent_streak_counter].current_streak = 0
+    m.properties[:incumbent_streak_counter].longest_streak[:streak_value] = 0
+    m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = ntuple(x->0.,Val(m.properties[:nissues]))
 end
 
 
@@ -391,16 +391,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
         (model[x].id => model[x].myPartyId)
         for x in abm.allids(model))
 
-
-
-    set_candidates!(model, switch)
-
-    new_incumbent = getmostvoted(model)
-
-    model.properties[:incumbent] = new_incumbent
     initialize_incumbent_streak_counter!(model)
-    model.properties[:voterBallotTracker] = Dict((k,[v]) for (k,v) in model.properties[:voters_partyids])
-    model.properties[:withinpartyshares] = get_withinpartyshares(model)
+    model.properties[:voterBallotTracker] = Dict((k,Int64[]) for (k,_) in model.properties[:voters_partyids])
     model.properties[:median_pos] = get_median_pos(model)
     return(model)
 end
@@ -421,7 +413,11 @@ function reset_candidates!(model::abm.ABM)
     for agent in abm.allids(model)
         model[agent].amIaCandidate = false
     end
-    model[model.properties[:incumbent]].amIaCandidate = true
+
+    if model.properties[:incumbent] != 0
+        model[model.properties[:incumbent]].amIaCandidate = true
+    end
+
 end
 
 "candidates_iteration_setup!(model::abm.ABM)"
@@ -527,7 +523,7 @@ function get_mean_among_supporters(supporters, model)
 end
 
 
-# TODO: IMPLEMENT THIS
+
 function get_new_parties_poss(model, new_supporters, old_supporters)
     ω = model.properties[:ω]
 
@@ -545,11 +541,9 @@ end
 function set_new_parties_poss!(model,newpposs)
     for (k,v) in newpposs
         model[k].pos = v
+        model.properties[:parties_candidateid_ppos][k][:partyposition] = v
     end
-
 end
-
-
 
 
 #FIXME: Double-check if I update the model.properties[:parties_candidateid_ppos][:partycandidate]!!!
@@ -622,9 +616,13 @@ function get_distance_MyCandidatevsPartyCandidate(agentid, model)
 end
 
 function get_distance_IvsPartyCandidate(agentid,model)
+    if model.properties[:incumbent]== 0
+        return(0.5)
+    else
     mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
-    dist.euclidean(model[agentid].pos,
-                   model[mypartycandidate].pos)
+    return(dist.euclidean(model[agentid].pos,
+                          model[mypartycandidate].pos))
+        end
 end
 
 
@@ -642,8 +640,13 @@ end
 
 
 function get_partyshare(m)
+    if m.properties[:incumbent]== 0
+        Dict(1=>1., 2 => 2. )
+    else
     proportionmap([m.properties[:voterBallotTracker][agentid][end]
-    for agentid in abm.allids(m)])
+                   for agentid in abm.allids(m)])
+    end
+
 end
 
 
@@ -662,8 +665,13 @@ end
 
 
 function get_incumbent_eccentricity(m)
+    if m.properties[:incumbent]== 0
+        0
+        else
     dist.euclidean(m[m.properties[:incumbent]].pos,
                    m.properties[:median_pos])
+    end
+
 end
 
 
@@ -765,9 +773,6 @@ function run_analysis(sim_cons, dm, threadId)
 end
 
 
-
-#get_longestIStreak(df)= df[end,:LongestIStreak]
-
 get_mean_col_val(df,col,niterations)= StatsBase.mean(df[end-(niterations-1):end,col])
 
 function get_system_measures(df)
@@ -787,7 +792,6 @@ function system_measure_AtRepetions(whichParametization)
         filter(x-> ("row$(whichParametization)" == split(x, "_")[1]),
                data))
 end
-
 
 
 function DictionariesToDataFrame(dictlist)
@@ -817,15 +821,11 @@ function DictionariesToDataFrame(dictlist)
   return DF.DataFrame(ret)
 end
 
-
 function get_ParametizationMeasuresMeans(whichparametrization)
     repetitionsvalues= DictionariesToDataFrame(system_measure_AtRepetions(whichparametrization))
     return(DF.mapcols(StatsBase.mean, repetitionsvalues))
 end
 
-
-
-# TODO: change parties' position too
 
 #=
 We have many options here:

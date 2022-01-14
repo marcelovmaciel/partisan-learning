@@ -15,20 +15,25 @@ include("../test/visualize_model.jl")
 
 # ** Try to analyze
 
-ncandidates = 2
+ncandidates = 5
 nissues = 2
-m = pla.initialize_model(500,nissues, ncandidates, δ=50, switch = :plurality)
+m = pla.initialize_model(500,nissues, ncandidates, δ=15, switch = :plurality)
 
+
+pla.model_step!(m)
+
+
+# FIXME: getting a problem now that initial condition is only initial lol
 visualize_model(m)
 
-
-
-
-
-m.properties[:parties_candidateid_ppos]
+m.properties[:incumbent_streak_counter]
 
 pla.dictmap(v->pla.get_mean_among_supporters(v,m),
             pla.get_parties_supporters(m))
+
+
+
+
 
 # ** Other tests
 
@@ -39,7 +44,6 @@ nissues = 5
 m = pla.initialize_model(1000,nissues,
                          ncandidates, δ = 1)
 
-foreach(Pkg.add, (  "GLMakie", "InteractiveDynamics"))
 
 
 
