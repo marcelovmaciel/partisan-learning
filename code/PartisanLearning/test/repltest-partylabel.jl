@@ -13,20 +13,19 @@ using Agents
 import Distances
 include("../test/visualize_model.jl")
 
+
 # ** Try to analyze
 
 ncandidates = 5
 nissues = 2
-m = pla.initialize_model(500,nissues, ncandidates, δ=15, switch = :plurality)
 
+m = pla.initialize_model(500,nissues, ncandidates, δ=40, switch = :plurality)
+
+pla.StreakCounter |> fieldnames
 
 pla.model_step!(m)
 
-m.properties
-
-# FIXME: getting a problem now that initial condition is only initial lol
 visualize_model(m)
-
 
 Dict()
 

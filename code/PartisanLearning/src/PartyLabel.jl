@@ -278,6 +278,7 @@ function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
    return(argmax(proportionmap(closest_candidates))) # argmax will return only one maximal, beware of that!
 end
 
+
 function get_parties_supporters(model)
     Dict(
         Pair(k,
@@ -298,7 +299,6 @@ function get_withinpartyshares(model)
                                parties_supporters)
    return(dictmap(proportionmap, withinpartyvotes))
 end
-
 
 mutable struct StreakCounter
     old_incumbentholder::Int64
@@ -515,13 +515,11 @@ function get_new_supporters(model, old_supporters)
     return(new_supporters)
 end
 
-
 function get_mean_among_supporters(supporters, model)
         [mean(model[i].pos[issue]
               for i in supporters)
          for issue in 1:model.properties[:nissues]]
 end
-
 
 
 function get_new_parties_poss(model, new_supporters, old_supporters)
