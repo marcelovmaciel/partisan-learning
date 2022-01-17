@@ -83,3 +83,4 @@ the main factor... Or maybe not.
 
 * TODO Fix the incumbent behavior
 - Right now it is a candidate, turn it into the party
+- command occur and highlight-phrase are my best friends

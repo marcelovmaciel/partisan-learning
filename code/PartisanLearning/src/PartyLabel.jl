@@ -308,7 +308,7 @@ mutable struct StreakCounter
 end
 
 DummyStreakCounter() = StreakCounter(1,Vector{Bool}(), 0, Dict(:streak_value => 0,
-                                                                :incumbent_pos => (0,)))
+                                                                 :incumbent_pos => (0,)))
 
 function initialize_incumbent_streak_counter!(m)
     m.properties[:incumbent_streak_counter].old_incumbentholder = 0
@@ -378,6 +378,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                        end
     model.properties[:parties_candidateid_ppos] = sample_parties_pos(nparties,
                                                         model)
+
     for (i,v) in enumerate(collect(keys(model.properties[:parties_candidateid_ppos])))
         model.properties[:parties_ids][i]=v
     end
@@ -398,7 +399,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
 end
 
 #Remember: INCUMBENT IS THE CANDIDATE!!!!!!!
-# TODO: CHECK the incumbent behavior throughout the code for fuck sake !!!!
+# +TODO: CHECK the incumbent behavior throughout the code for fuck sake !!!!
 # ** Stepping
 #=
 there is some sublety here.
@@ -462,6 +463,15 @@ end
 
 
 
+function HaveIVotedAgainstMyParty(agentid::Int, model)
+    mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
+    mycandidate = get_whichCandidatePartyAgentVotesfor(agentid, model)[1]
+    return(mycandidate != mypartycandidate)
+end
+
+HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
+
+
 #=
 1. Pick the proportion of iterations that I voted for the party I’m voting
 for in this iteration.
@@ -469,20 +479,20 @@ for in this iteration.
 different from me;
 - I change my party id to this other party with a probability equal to tanh(proportion 1 + proportion 2). =#
 
-
-
 function update_partyid!(agentid,model)
     myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
     proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
+    proportion_peers_like_me = get_proportion_peers_voteLikeMe(agentid,model)
 
-    proportion_peersUnlikeMe = (1-get_proportion_peers_voteLikeMe(agentid,model))
-
-    changechance = (proportion_IvotedForThisParty + proportion_peersUnlikeMe)/2
-    if rand() < changechance
-        model[agentid].myPartyId = myLast_PartyVote
-        #model.properties[:voterBallotTracker][agentid] = [myLast_PartyVote]
+    if HaveIVotedAgainstMyParty(agentid,model)
+        keep_party_id_chance = proportion_IvotedForThisParty * proportion_peers_like_me
+    else
+        keep_party_id_chance = proportion_IvotedForThisParty *  (1-proportion_peers_like_me)
     end
 
+    if rand() > keep_party_id_chance
+        model[agentid].myPartyId = myLast_PartyVote
+    end
 end
 
 
@@ -566,8 +576,10 @@ function model_step!(model)
     #of candidate by updating their partyid =#
     for i in abm.allids(model)
         update_partyid!(i,model)
+
         add_partyswitch_tocounter!(i,model)
         model.properties[:voters_partyids][i] = model[i].myPartyId
+
     end
 
     newposs = get_new_parties_poss(model,get_parties_supporters(model), old_supporters )
@@ -589,14 +601,6 @@ candidate.
 the candidate of their party.
 =#
 
-function HaveIVotedAgainstMyParty(agentid::Int, model)
-    mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
-    mycandidate = get_whichCandidatePartyAgentVotesfor(agentid, model)[1]
-    return(mycandidate != mypartycandidate)
-end
-
-
-HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
 
 #adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
 
