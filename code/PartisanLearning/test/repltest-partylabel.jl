@@ -21,7 +21,11 @@ nissues = 2
 
 m = pla.initialize_model(500,nissues, ncandidates, δ=10, κ = 50., switch = :runoff)
 
+m.properties[:parties_candidateid_ppos_δ]
+
 visualize_model(m)
+
+
 
 pla.dictmap(v->pla.get_mean_among_supporters(v,m),
             pla.get_parties_supporters(m))

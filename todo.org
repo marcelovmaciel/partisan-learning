@@ -86,5 +86,5 @@ the main factor... Or maybe not.
 * DONE fix the candidate choice sampler
 - Simply filter before sampling!
 
-* TODO add \(\delta\) as a field for the parties;
+
 * TODO Add \(\kappa\) as field for agents
