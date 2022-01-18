@@ -87,4 +87,4 @@ the main factor... Or maybe not.
 - Simply filter before sampling!
 
 
-* TODO Add \(\kappa\) as field for agents
+* DONE Add \(\kappa\) as field for agents

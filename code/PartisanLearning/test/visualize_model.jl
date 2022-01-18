@@ -6,7 +6,8 @@ function visualize_model(m)
     pla.model_step!(m)
 
     params = Dict(:κ => 0.0:10:70, :switch => [:random, :plurality, :runoff],
-                  :δ => 0.0:10:70)
+                  :δ => 0.0:10:70,
+                  :ω => 0.0:0.1:1.0)
 
     agent_colors(a) = a.id == m.properties[:incumbent_party]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
     agent_size(a) = a.id == m.properties[:incumbent_party]  ? 25 : (a.id in m.properties[:parties_ids] ? 20 : (a.amIaCandidate ? 15 : 5))
@@ -21,16 +22,16 @@ function visualize_model(m)
   adata = [#(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
            (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
 
-  mdata = [pla.normalized_ENP,
+  mdata = [
            x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
            x-> x.properties[:party_switches][end]/x.properties[:nagents],
            x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
            pla.get_incumbent_eccentricity,
            pla.get_mean_contestant_eccentricity]
-
+#pla.normalized_ENP,
   alabels = ["Rep"]
-  mlabels = ["NENP", "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
-
+  mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
+#"NENP",
   fig,adf,mdf = abm_data_exploration(m,
                                      pla.abm.dummystep,
                                      pla.model_step!,

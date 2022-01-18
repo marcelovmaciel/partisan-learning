@@ -45,6 +45,7 @@ mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
     amIaCandidate::Bool
+    κ::Float64
     myPartyId::Int
 end
 
@@ -63,11 +64,11 @@ const bounds = (0,100)
 end
 
 
-function Voter(id::Int,nissues =  1,
-               pos = Tuple(rand(distri.Uniform(bounds...),nissues)))
+function Voter(id::Int;nissues =  1,
+               pos = Tuple(rand(distri.Uniform(bounds...),nissues)), κ = 10.)
     amIaCandidate = false
     myPartyId = -3
-    return(Voter{nissues}(id,pos,amIaCandidate, myPartyId))
+    return(Voter{nissues}(id,pos,amIaCandidate, κ, myPartyId))
 end
 
  function dictmap(l,d)
@@ -357,9 +358,9 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     model = abm.ABM(Voter{nissues}, space; rng,properties = properties)
 
     for i in 1:nagents
-        vi = Voter(i, nissues)
-                       abm.add_agent_pos!(vi, model)
-                       end
+        vi = Voter(i, nissues=nissues, κ = model.properties[:κ])
+        abm.add_agent_pos!(vi, model)
+    end
     model.properties[:parties_candidateid_ppos_δ] = sample_parties_pos(nparties,
                                                         model)
 
@@ -520,7 +521,7 @@ function get_new_parties_poss(model, new_supporters, old_supporters)
     mean_new_supporters = dictmap(v->get_mean_among_supporters(v,model),
                                   new_supporters)
 
-    kvdictmap((k,v)-> (ω .* v .+ (1-ω) .* mean_new_supporters[k]) |> Tuple, mean_previous_supporters )
+    kvdictmap((k,v)-> (ω .* v .+ ((1-ω) .* mean_new_supporters[k])) |> Tuple, mean_previous_supporters )
 
 end
 

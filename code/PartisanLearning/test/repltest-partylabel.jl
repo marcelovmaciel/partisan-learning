@@ -19,13 +19,18 @@ include("../test/visualize_model.jl")
 ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(500,nissues, ncandidates, δ=10, κ = 50., switch = :runoff)
+m = pla.initialize_model(500,nissues, ncandidates, δ=10, κ = 50., switch = :runoff, ω = 0.8)
 
 m.properties[:parties_candidateid_ppos_δ]
 
 visualize_model(m)
 
+m.properties[:κ]
 
+pla.model_step!(m)
+
+
+m[2]
 
 pla.dictmap(v->pla.get_mean_among_supporters(v,m),
             pla.get_parties_supporters(m))
