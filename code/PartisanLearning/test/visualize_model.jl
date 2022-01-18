@@ -7,7 +7,8 @@ function visualize_model(m)
 
     params = Dict(:κ => 0.0:10:70, :switch => [:random, :plurality, :runoff],
                   :δ => 0.0:10:70,
-                  :ω => 0.0:0.1:1.0)
+                  :ω => 0.0:0.1:1.0,
+                  :kappa_switch => [:on, :off])
 
     agent_colors(a) = a.id == m.properties[:incumbent_party]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
     agent_size(a) = a.id == m.properties[:incumbent_party]  ? 25 : (a.id in m.properties[:parties_ids] ? 20 : (a.amIaCandidate ? 15 : 5))

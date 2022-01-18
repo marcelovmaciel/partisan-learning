@@ -315,7 +315,7 @@ function get_median_pos(m)
 
 
 function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 2., δ=1.,  switch= :random,  seed = 125, ω = 0.8)
+                          κ = 2., δ=1.,  switch= :random,  seed = 125, ω = 0.8, kappa_switch = :off)
     space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues), periodic = false)
     rng = Random.MersenneTwister(seed)
     # postype = typeof(ntuple(x -> 1.,nissues))
@@ -353,7 +353,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :withinpartyshares => withinpartyshares,
                       :incumbent_streak_counter => DummyStreakCounter(),
                       :party_switches => [0],
-                      :median_pos => [])
+                      :median_pos => [],
+                      :kappa_switch => :off)
 
     model = abm.ABM(Voter{nissues}, space; rng,properties = properties)
 
@@ -532,12 +533,35 @@ function set_new_parties_poss!(model,newpposs)
     end
 end
 
+
+
+function set_agent_new_κ!(agentid,model)
+    myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
+    proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
+    baseline_κ = model.properties[:κ]
+    model[agentid].κ = proportion_IvotedForThisParty * baseline_κ
+end
+
+function set_agents_new_κ!(model, kappa_switch= :off)
+    for i in abm.allids(model)
+        if kappa_switch == :off
+            continue
+        else
+            set_agent_new_κ!(i, model)
+        end
+    end
+end
+
+
+
+
 #FIXME: Double-check if I update the model.properties[:parties_candidateid_ppos_δ][:partycandidate]!!!
 # I believe it does update with set_candidates! though. Nevertheless, check
 function model_step!(model)
     candidates_iteration_setup!(model)
 
     old_supporters = get_parties_supporters(model) |> copy
+    set_agents_new_κ!(model, model.properties[:kappa_switch])
     new_winner_party = model[getmostvoted(model, :iteration)].myPartyId
 
     model.properties[:incumbent_streak_counter].old_incumbentholder = model.properties[:incumbent_party]
