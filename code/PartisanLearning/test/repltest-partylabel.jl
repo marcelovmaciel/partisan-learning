@@ -16,27 +16,15 @@ include("../test/visualize_model.jl")
 
 # ** Try to analyze
 
-ncandidates = 5
+ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(500,nissues, ncandidates, δ=40, switch = :plurality)
-
-pla.StreakCounter |> fieldnames
-
-pla.model_step!(m)
+m = pla.initialize_model(500,nissues, ncandidates, δ=10, κ = 50., switch = :runoff)
 
 visualize_model(m)
 
-Dict()
-
-m.properties[:incumbent_streak_counter]
-
 pla.dictmap(v->pla.get_mean_among_supporters(v,m),
             pla.get_parties_supporters(m))
-
-
-
-
 
 # ** Other tests
 

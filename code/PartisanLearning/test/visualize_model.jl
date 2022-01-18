@@ -25,10 +25,11 @@ function visualize_model(m)
            x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
            x-> x.properties[:party_switches][end]/x.properties[:nagents],
            x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
-           pla.get_incumbent_eccentricity]
+           pla.get_incumbent_eccentricity,
+           pla.get_mean_contestant_eccentricity]
 
   alabels = ["Rep"]
-  mlabels = ["NENP", "IStreaks", "PSwitches","iSwitch", "ecc"]
+  mlabels = ["NENP", "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 
   fig,adf,mdf = abm_data_exploration(m,
                                      pla.abm.dummystep,

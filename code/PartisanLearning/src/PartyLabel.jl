@@ -94,28 +94,28 @@ function sample_parties_pos(nparties, model)
     return(actualpartiesposs)
 end
 
+
 function sample_candidates(party,m,n=4)
-        δ = m.properties[:δ]
-        try
-            sample(collect(abm.nearby_ids(m[party],
-                       m,
-                       δ,
-                       exact = true)),n)
-        catch _
-                    sample(collect(abm.nearby_ids(m[party],
-                       m,
-                       10., exact = true)),n)
-        end
+    δ = m.properties[:δ]
+
+    nearby_agents = collect(abm.nearby_ids(m[party], m, δ, exact = true))
+
+    nearby_agents_from_the_party = filter(agentid -> m[agentid].myPartyId == party,
+                                          nearby_agents)
+    (isempty(nearby_agents_from_the_party) ?
+        fill(party, (n,1)) :
+        sample(nearby_agents_from_the_party,n))
 end
 
+
 function select_primariesCandidates(model::abm.ABM)
-    # FIXME: add a conditional that the candidate should be from the party
     party_candidate_pairs = (
         model.properties[:parties_ids] .|>
             (pid -> Pair(pid,sample_candidates(pid,model))) |>
         Dict)
       return(party_candidate_pairs)
 end
+
 
 function get_plurality_result(primariesresult::Dict)
     dictmap(argmax ∘ proportionmap, primariesresult)

@@ -81,6 +81,10 @@ the main factor... Or maybe not.
 
 * DONE Fix the initial condition to actually be ONLY an initial condition
 
-* TODO Fix the incumbent behavior
-- Right now it is a candidate, turn it into the party
-- command occur and highlight-phrase are my best friends
+* DONE Fix the incumbent behavior
+-
+* DONE fix the candidate choice sampler
+- Simply filter before sampling!
+
+* TODO add \(\delta\) as a field for the parties;
+* TODO Add \(\kappa\) as field for agents
