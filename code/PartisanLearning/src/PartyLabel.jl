@@ -46,11 +46,11 @@ mutable struct Voter{n} <: abm.AbstractAgent
     pos::NTuple{n,Float64}
     amIaCandidate::Bool
     myPartyId::Int
-    #= Note that if a voter is a candidate then its ~myPartyId~ should be the
-agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
-throughout simulation inspection =#
 end
 
+  #= Note that if a voter is a candidate then its ~myPartyId~ should be the
+agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
+throughout simulation inspection =#
 const bounds = (0,100)
 
 @kwdef struct ModelParams
@@ -78,6 +78,10 @@ function kvdictmap(l,d)
     Dict(Pair(k,l(k,v)) for (k,v) in d)
 end
 
+function kdictmap(l,d)
+    Dict(Pair(k,l(k)) for (k,_) in d)
+end
+
 
 function sample_parties_pos(nparties, model)
     ids = collect(abm.allids(model))
@@ -90,7 +94,7 @@ function sample_parties_pos(nparties, model)
     return(actualpartiesposs)
 end
 
-function sample_candidates(party,m,n)
+function sample_candidates(party,m,n=4)
         δ = m.properties[:δ]
         try
             sample(collect(abm.nearby_ids(m[party],
@@ -100,31 +104,18 @@ function sample_candidates(party,m,n)
         catch _
                     sample(collect(abm.nearby_ids(m[party],
                        m,
-                       1., exact = true)),n)
+                       10., exact = true)),n)
         end
 end
 
 function select_primariesCandidates(model::abm.ABM)
-
-    party_candidate_pairs = Pair{Int64, Vector{Int64}}[]
     # FIXME: add a conditional that the candidate should be from the party
-    # FIXME: simplify with kdictmap
-    for pid in model.properties[:parties_ids]
-        # this allows me use it in the initial condition without any problem
-        if model.properties[:incumbent] == 0
-            push!(party_candidate_pairs,
-                  Pair(pid, sample_candidates(pid,model,4)))
-        elseif pid == model[model.properties[:incumbent]].myPartyId
-            # this one helps me to jump the incumbent after the initial condition
-            continue
-        else
-            push!(party_candidate_pairs,
-                  Pair(pid, sample_candidates(pid,model,4)))
-        end
-    end
-    return(Dict(party_candidate_pairs))
+    party_candidate_pairs = (
+        model.properties[:parties_ids] .|>
+            (pid -> Pair(pid,sample_candidates(pid,model))) |>
+        Dict)
+      return(party_candidate_pairs)
 end
-
 
 function get_plurality_result(primariesresult::Dict)
     dictmap(argmax ∘ proportionmap, primariesresult)
@@ -167,10 +158,10 @@ end
 # FIXME: Should create a radius  + m.properties[:parties_ids] version
 function get_random_candidates(m)
     parties_supporters = get_parties_supporters(m)
-        if m.properties[:incumbent] == 0
+        if m.properties[:incumbent_party] == 0
             dictmap(rand,parties_supporters)
     else
-        delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
+        delete!(parties_supporters, m[m.properties[:incumbent_party]].myPartyId)
         dictmap(rand,
                 parties_supporters)
     end
@@ -246,17 +237,9 @@ function get_primaries_votes(m, primariesCandidatesDict)
     get_closest_toI(i) = get_closest_fromList(i,
                          primariesCandidatesDict[m[i].myPartyId],
                                               m)
-    if m.properties[:incumbent] == 0
-        dictmap(supporters->map(get_closest_toI,supporters),
-                parties_supporters)
-    else
-        delete!(parties_supporters, m[m.properties[:incumbent]].myPartyId)
-        dictmap(supporters->map(get_closest_toI,supporters),
-                parties_supporters)
-    end
-
+    return(dictmap(supporters->map(get_closest_toI,supporters),
+                parties_supporters))
 end
-
 
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
@@ -353,7 +336,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     1) use it for synchronous partyid update
     2) plotting (closer to the sugarscape example)
     =#
-    properties = Dict(:incumbent => 0,
+    properties = Dict(:incumbent_party => 0,
                       :nagents => nagents,
                       :nissues => nissues,
                       :ncandidates => nparties,
@@ -414,12 +397,8 @@ function reset_candidates!(model::abm.ABM)
     for agent in abm.allids(model)
         model[agent].amIaCandidate = false
     end
-
-    if model.properties[:incumbent] != 0
-        model[model.properties[:incumbent]].amIaCandidate = true
-    end
-
 end
+
 
 "candidates_iteration_setup!(model::abm.ABM)"
 function candidates_iteration_setup!(m::abm.ABM)
@@ -462,7 +441,6 @@ function get_proportion_peers_voteLikeMe(agentid,model)
 end
 
 
-
 function HaveIVotedAgainstMyParty(agentid::Int, model)
     mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
     mycandidate = get_whichCandidatePartyAgentVotesfor(agentid, model)[1]
@@ -497,7 +475,7 @@ end
 
 
 function update_streakCounter!(m)
-    if m.properties[:incumbent] != m.properties[:incumbent_streak_counter].old_incumbentholder
+    if m.properties[:incumbent_party] != m.properties[:incumbent_streak_counter].old_incumbentholder
         push!(m.properties[:incumbent_streak_counter].has_switchedlist, true)
         m.properties[:incumbent_streak_counter].current_streak = 1
     else
@@ -506,7 +484,7 @@ function update_streakCounter!(m)
     end
 
     if m.properties[:incumbent_streak_counter].current_streak > m.properties[:incumbent_streak_counter].longest_streak[:streak_value]
-        m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent]].pos
+        m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent_party]].pos
         m.properties[:incumbent_streak_counter].longest_streak[:streak_value] = m.properties[:incumbent_streak_counter].current_streak
     end
 end
@@ -557,12 +535,11 @@ end
 function model_step!(model)
     candidates_iteration_setup!(model)
 
-
     old_supporters = get_parties_supporters(model) |> copy
-    new_winner = getmostvoted(model, :iteration)
+    new_winner_party = model[getmostvoted(model, :iteration)].myPartyId
 
-    model.properties[:incumbent_streak_counter].old_incumbentholder = model.properties[:incumbent]
-    model.properties[:incumbent] = new_winner
+    model.properties[:incumbent_streak_counter].old_incumbentholder = model.properties[:incumbent_party]
+    model.properties[:incumbent_party] = new_winner_party
     update_streakCounter!(model)
     for i in abm.allids(model)
         party_i_votedfor = get_whichCandidatePartyAgentVotesfor(i,model)[2]
@@ -616,13 +593,9 @@ function get_distance_MyCandidatevsPartyCandidate(agentid, model)
 end
 
 function get_distance_IvsPartyCandidate(agentid,model)
-    if model.properties[:incumbent]== 0
-        return(0.5)
-    else
     mypartycandidate = model.properties[:parties_candidateid_ppos][model[agentid].myPartyId][:partycandidate]
     return(dist.euclidean(model[agentid].pos,
                           model[mypartycandidate].pos))
-        end
 end
 
 
@@ -640,15 +613,9 @@ end
 
 
 function get_partyshare(m)
-    if m.properties[:incumbent]== 0
-        Dict(1=>1., 2 => 0.5 )
-    else
     proportionmap([m.properties[:voterBallotTracker][agentid][end]
                    for agentid in abm.allids(m)])
-    end
-
 end
-
 
 function get_ENP(m)
     shares = get_partyshare(m)
@@ -661,20 +628,21 @@ function normalized_ENP(m)
 end
 
 
-# x->x[x.properties[:incumbent]].myPartyId, # get incumbent
-
+# x->x[x.properties[:incumbent_party]].myPartyId, # get incumbent_party
 
 function get_incumbent_eccentricity(m)
-    if m.properties[:incumbent]== 0
-        0
-        else
-    dist.euclidean(m[m.properties[:incumbent]].pos,
+      dist.euclidean(m[m.properties[:incumbent_party]].pos,
                    m.properties[:median_pos])
-    end
-
 end
 
-
+function get_mean_contestant_eccentricity(m)
+    contestants = filter(pid-> pid != m.properties[:incumbent_party],
+                         m.properties[:parties_ids])
+    (contestants .|>
+      (contestant -> dist.euclidean(m[contestant].pos,
+                                    m.properties[:median_pos])) |>
+                                        mean)
+end
 
 # function static_preplot!(ax,m)
 
@@ -825,40 +793,6 @@ function get_ParametizationMeasuresMeans(whichparametrization)
     repetitionsvalues= DictionariesToDataFrame(system_measure_AtRepetions(whichparametrization))
     return(DF.mapcols(StatsBase.mean, repetitionsvalues))
 end
-
-
-#=
-We have many options here:
-- Do nothing;
-- If I win move to a random position between myself and the candidate, else do nothing
-
-- If I win move to a random position in the line from  myself to the candidate, else move to random position in the line from myself to the symmetric of the candidate
-
-
-=#
-
-
-function pos_between_partyAndCandidate(p,c)
-    # I'll use the equation of the line-segment between two points:
-    # λa + (1-λ)b, where 0 <= λ <=1
-    # and then sample from an Uniform and be happy
-
-
-
-end
-
-
-function pos_between_partyAndReflectedCandidate(p,c)
-# for that I gotta first find the position of the reflected candidate
-# see https://en.wikipedia.org/wiki/Point_reflection
-# or https://en.wikipedia.org/wiki/Homothety
-# Thus it is 2 .* p.pos .- c.pos
-# As usual, check bounds!
-
-end
-
-
-
 
 
 # TODO: Check performance

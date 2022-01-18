@@ -300,6 +300,38 @@ end
 
 get_distance_IvsParty(agent::Voter, model) = get_distance_IvsParty(agent.id, model)
 
+#=
+We have many options here:
+- Do nothing;
+- If I win move to a random position between myself and the candidate, else do nothing
+
+- If I win move to a random position in the line from  myself to the candidate, else move to random position in the line from myself to the symmetric of the candidate
+
+
+=#
+
+
+function pos_between_partyAndCandidate(p,c)
+    # I'll use the equation of the line-segment between two points:
+    # λa + (1-λ)b, where 0 <= λ <=1
+    # and then sample from an Uniform and be happy
+
+
+
+end
+
+
+function pos_between_partyAndReflectedCandidate(p,c)
+# for that I gotta first find the position of the reflected candidate
+# see https://en.wikipedia.org/wiki/Point_reflection
+# or https://en.wikipedia.org/wiki/Homothety
+# Thus it is 2 .* p.pos .- c.pos
+# As usual, check bounds!
+
+end
+
+
+
 
 
 end  # this is where the module ends!!!

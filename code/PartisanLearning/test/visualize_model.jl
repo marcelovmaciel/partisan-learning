@@ -8,9 +8,9 @@ function visualize_model(m)
     params = Dict(:κ => 0.0:10:70, :switch => [:random, :plurality, :runoff],
                   :δ => 0.0:10:70)
 
-  agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
-  agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
-
+    agent_colors(a) = a.id == m.properties[:incumbent_party]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
+    agent_size(a) = a.id == m.properties[:incumbent_party]  ? 25 : (a.id in m.properties[:parties_ids] ? 20 : (a.amIaCandidate ? 15 : 5))
+    agent_marker(a) = if a.id in m.properties[:parties_ids] '♠' else '∘' end
 
   #higher kappa means agents will tend to vote more for
   #their partyid. Conversely, lower kappa means people vote more
@@ -37,7 +37,8 @@ function visualize_model(m)
                                      adata, mdata,
                                      alabels,mlabels,
                                      ac = agent_colors,
-                                     as = agent_size, spu = 1 )
+                                     as = agent_size,
+                                     am = agent_marker,  spu = 1 )
 
 
   partyproportions = pla.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
