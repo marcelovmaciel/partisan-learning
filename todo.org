@@ -88,3 +88,20 @@ the main factor... Or maybe not.
 
 
 * DONE Add \(\kappa\) as field for agents
+
+
+* TODO [#B] Read analysis papers
+- [X] [[cite:&siegel18_analy_comput_model]]
+- [[cite:&lavin2021simulation]]
+- [[cite:&borgonovo2022sensitivity]]
+
+* TODO [#A] write down the model description
+#+begin_quote
+OK, let's skip for a while writing out a system of equations All I really need
+is a clear statement in English with just enough math symbolism for me to be
+sure of exactly how the different pieces of the model work. Then I'll worry
+about describing the comparative statics in a non-formal way.
+#+end_quote
+
+* TODO collect and visualize the probability of agreement between voter party ID and vote choice
+- He seems to want the probability of keeping party id!!

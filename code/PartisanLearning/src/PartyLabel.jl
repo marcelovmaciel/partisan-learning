@@ -460,18 +460,26 @@ for in this iteration.
 different from me;
 - I change my party id to this other party with a probability equal to tanh(proportion 1 + proportion 2). =#
 
-function update_partyid!(agentid,model)
+function get_keep_party_id_prob(agentid,model)
     myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
     proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
     proportion_peers_like_me = get_proportion_peers_voteLikeMe(agentid,model)
+    # FIXME: check if this proportion is correct
 
     if HaveIVotedAgainstMyParty(agentid,model)
-        keep_party_id_chance = proportion_IvotedForThisParty * proportion_peers_like_me
+        keep_party_id_prob = proportion_IvotedForThisParty *  (1-proportion_peers_like_me)
     else
-        keep_party_id_chance = proportion_IvotedForThisParty *  (1-proportion_peers_like_me)
+        keep_party_id_prob = proportion_IvotedForThisParty * proportion_peers_like_me
     end
 
-    if rand() > keep_party_id_chance
+
+    return(keep_party_id_prob)
+end
+
+function update_partyid!(agentid,model)
+    myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
+    keep_party_id_prob = get_keep_party_id_prob(agentid,model)
+    if rand() > keep_party_id_prob
         model[agentid].myPartyId = myLast_PartyVote
     end
 end

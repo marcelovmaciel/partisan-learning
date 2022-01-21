@@ -16,12 +16,18 @@ include("../test/visualize_model.jl")
 
 # ** Try to analyze
 
+pla.dist.euclidean([50,50], [100,100])
+
 ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(500,nissues, ncandidates, δ=10, κ = 50., switch = :runoff, ω = 0.8)
+m = pla.initialize_model(500,nissues, ncandidates, δ=10, κ = 50., switch =
+:runoff, ω = 0.8, kappa_switch= :on)
 
 m.properties[:parties_candidateid_ppos_δ]
+
+visualize_simpler(m)
+
 
 visualize_model(m)
 
