@@ -352,6 +352,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :voterBallotTracker=>voterBallotTracker,
                       :withinpartyshares => withinpartyshares,
                       :incumbent_streak_counter => DummyStreakCounter(),
+                      :keep_probs => [[1.,1]],
                       :party_switches => [0],
                       :median_pos => [],
                       :kappa_switch => :off)
@@ -384,8 +385,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     return(model)
 end
 
-#Remember: INCUMBENT IS THE CANDIDATE!!!!!!!
-# +TODO: CHECK the incumbent behavior throughout the code for fuck sake !!!!
+
+
 # ** Stepping
 #=
 there is some sublety here.
@@ -472,7 +473,6 @@ function get_keep_party_id_prob(agentid,model)
         keep_party_id_prob = proportion_IvotedForThisParty * proportion_peers_like_me
     end
 
-
     return(keep_party_id_prob)
 end
 
@@ -481,6 +481,7 @@ function update_partyid!(agentid,model)
     keep_party_id_prob = get_keep_party_id_prob(agentid,model)
     if rand() > keep_party_id_prob
         model[agentid].myPartyId = myLast_PartyVote
+        model.properties[:party_switches][end]+=1
     end
 end
 
@@ -519,6 +520,7 @@ function get_mean_among_supporters(supporters, model)
               for i in supporters)
          for issue in 1:model.properties[:nissues]]
 end
+
 
 
 function get_new_parties_poss(model, new_supporters, old_supporters)
@@ -582,13 +584,12 @@ function model_step!(model)
     model.properties[:withinpartyshares] = get_withinpartyshares(model)
 
     push!(model.properties[:party_switches], 0)
-
+    push!(model.properties[:keep_probs], [])
     #=In this loop agents deal with their new choice
     #of candidate by updating their partyid =#
     for i in abm.allids(model)
+         push!(model.properties[:keep_probs][end], get_keep_party_id_prob(i,model))
         update_partyid!(i,model)
-
-        add_partyswitch_tocounter!(i,model)
         model.properties[:voters_partyids][i] = model[i].myPartyId
 
     end

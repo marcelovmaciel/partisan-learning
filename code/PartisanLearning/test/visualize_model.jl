@@ -70,16 +70,18 @@ function visualize_model(m)
 end
 
 
+haveiswitched(agent::pla.Voter, m) = haveiswitched(agent.id,m)
+
 function visualize_simpler(m)
     # FIXME: getting a problem now that initial condition is only initial lol
     pla.model_step!(m)
 
-    params = Dict(:κ => 0.0:10:, :switch => [:random, :plurality, :runoff],
+    params = Dict(:κ => 0.0:5:70.0, :switch => [:random, :plurality, :runoff],
                   :δ => 0.0:10:70,
                   :ω => 0.0:0.1:1.0,
                   :kappa_switch => [:off, :on])
 
-    agent_colors(a) = a.id == m.properties[:incumbent_party]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
+    agent_colors(a) = a.myPartyId == m.properties[:parties_ids][1]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
     agent_size(a) = a.id == m.properties[:incumbent_party]  ? 25 : (a.id in m.properties[:parties_ids] ? 20 : (a.amIaCandidate ? 15 : 5))
     agent_marker(a) = if a.id in m.properties[:parties_ids] '♠' else '∘' end
 
@@ -94,21 +96,25 @@ function visualize_simpler(m)
 
 
     adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
-  # mdata = [
+    mdata = [ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
   #          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
-  #          x-> x.properties[:party_switches][end]/x.properties[:nagents],
+  #
   #          x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
   #          pla.get_incumbent_eccentricity,
   #          pla.get_mean_contestant_eccentricity]
 #pla.normalized_ENP,
-  alabels = ["keep party prob"]
+    alabels = ["keep party prob"]
+    mlabels = ["PSwitches"]
   # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 #"NENP",
   fig,adf,mdf = abm_data_exploration(m,
                                      pla.abm.dummystep,
                                      pla.model_step!,
                                      params;
-                                     adata, alabels,
+                                     adata,
+                                     mdata,
+                                     alabels,
+                                     mlabels,
                                      ac = agent_colors,
                                      as = agent_size,
                                      am = agent_marker,  spu = 1 )
