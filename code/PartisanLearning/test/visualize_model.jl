@@ -76,12 +76,21 @@ function visualize_simpler(m)
     # FIXME: getting a problem now that initial condition is only initial lol
     pla.model_step!(m)
 
-    params = Dict(:κ => 0.0:5:70.0, :switch => [:random, :plurality, :runoff],
+    params = Dict(:κ => 0.0:5:100.0, :switch => [:random, :plurality, :runoff],
                   :δ => 0.0:10:70,
                   :ω => 0.0:0.1:1.0,
                   :kappa_switch => [:off, :on])
 
-    agent_colors(a) = a.myPartyId == m.properties[:parties_ids][1]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
+    function agent_colors(a)
+
+        if a.id == m.properties[:incumbent_party]
+            :yellow
+        elseif a.myPartyId == m.properties[:parties_ids][1]
+            :red
+        else :blue
+        end
+
+        end
     agent_size(a) = a.id == m.properties[:incumbent_party]  ? 25 : (a.id in m.properties[:parties_ids] ? 20 : (a.amIaCandidate ? 15 : 5))
     agent_marker(a) = if a.id in m.properties[:parties_ids] '♠' else '∘' end
 
@@ -97,6 +106,7 @@ function visualize_simpler(m)
 
     adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
     mdata = [ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
+
   #          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
   #
   #          x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],

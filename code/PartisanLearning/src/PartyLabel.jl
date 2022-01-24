@@ -476,9 +476,10 @@ function get_keep_party_id_prob(agentid,model)
     return(keep_party_id_prob)
 end
 
-function update_partyid!(agentid,model)
+function update_partyid!(agentid,model,
+                         keep_party_id_prob = get_keep_party_id_prob(agentid,model))
     myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
-    keep_party_id_prob = get_keep_party_id_prob(agentid,model)
+
     if rand() > keep_party_id_prob
         model[agentid].myPartyId = myLast_PartyVote
         model.properties[:party_switches][end]+=1
@@ -588,8 +589,9 @@ function model_step!(model)
     #=In this loop agents deal with their new choice
     #of candidate by updating their partyid =#
     for i in abm.allids(model)
-         push!(model.properties[:keep_probs][end], get_keep_party_id_prob(i,model))
-        update_partyid!(i,model)
+        keep_prob = get_keep_party_id_prob(i,model)
+        push!(model.properties[:keep_probs][end], keep_prob)
+        update_partyid!(i,model,keep_prob)
         model.properties[:voters_partyids][i] = model[i].myPartyId
 
     end

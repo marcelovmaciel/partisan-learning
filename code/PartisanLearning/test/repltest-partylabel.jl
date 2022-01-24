@@ -21,10 +21,11 @@ pla.dist.euclidean([50,50], [100,100])
 ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(500,nissues, ncandidates, δ=20, κ = 0., switch =
+m = pla.initialize_model(500,nissues, ncandidates, δ=20, κ = 100, switch =
 :runoff, ω = 0.8, kappa_switch= :off)
 
-pla.StatsBase.median.(m.properties[:keep_probs])
+
+m.properties
 
 m.properties
 
@@ -36,8 +37,7 @@ m.properties[:withinpartyshares]
 # FIXME: doesnt make sense given the voterballot tracker
 # so maybe im not updating the withinpartyshares correctly and this leads
 # to some weird behavior downstream
-# FIXME: or maybe I'm not doing calculating the partyswithces correctly
-# or both LOL
+
 
 
 
