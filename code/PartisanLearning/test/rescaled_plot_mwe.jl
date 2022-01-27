@@ -41,31 +41,30 @@ function model_step!(model)
     end
 end
 
-m = initialize_model()
 
-
-fig,adf,mdf = abm_data_exploration(m,
-                                     dummystep,
-                                     model_step!)
-
-var_wanna_observe = [Observable([m[i].var_to_plot * 10]) for i in  allids(m)]
-nsteps = Observable([0.])
-function newstep(m, var_wanna_observe = var_wanna_observe, nsteps = nsteps)
-      model_step!(m)
-      var_values = [m[i].var_to_plot * 10 for i in  allids(m)]
-      for (i,v) in enumerate(var_values)
-          var_wanna_observe[i][] = [v]
-      end
-      nsteps[] = push!(nsteps.val,nsteps.val[end]+ 1.)
-  end
-
-fig,adf,mdf = abm_data_exploration(m, dummystep, newstep)
-
-
-
-scatter(fig[1,2], nsteps, var_wanna_observe[1])
-lines!(fig[1,2],nsteps, var_wanna_observe[1])
-for i in var_wanna_observe[2:end]
-    scatter!(fig[1,2], nsteps, i)
-    lines!(fig[1,2], nsteps, i)
+function visualize_m(m)
+    fig,adf,mdf = abm_data_exploration(m,
+                                       dummystep,
+                                       model_step!)
+    var_wanna_observe = [Observable([m[i].var_to_plot * 10]) for i in  allids(m)]
+    nsteps = Observable([0.])
+    function newstep(m, var_wanna_observe = var_wanna_observe, nsteps = nsteps)
+        model_step!(m)
+        var_values = [m[i].var_to_plot * 10 for i in  allids(m)]
+        for (i,v) in enumerate(var_values)
+            var_wanna_observe[i][] = [v]
+        end
+        nsteps[] = push!(nsteps.val,nsteps.val[end]+ 1.)
+    end
+    fig,adf,mdf = abm_data_exploration(m, dummystep, newstep)
+    scatter(fig[1,2], nsteps, var_wanna_observe[1])
+    lines!(fig[1,2],nsteps, var_wanna_observe[1])
+    for i in var_wanna_observe[2:end]
+        scatter!(fig[1,2], nsteps, i)
+        lines!(fig[1,2], nsteps, i)
+    end
 end
+
+
+m = initialize_model()
+visualize_m(m)
