@@ -422,6 +422,8 @@ function get_whichCandidatePartyAgentVotesfor(agentid, model)
 
     two_candidates_distance = dist.euclidean(model[closest_to_me_id_pid[1]].pos,
                                              model[mypartycandidate].pos)
+
+
     if two_candidates_distance > κ
         whoillvotefor = closest_to_me_id_pid
     end

@@ -21,7 +21,7 @@ pla.dist.euclidean([50,50], [100,100])
 ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(500,nissues, ncandidates, δ=20, κ = 100, switch =
+m = pla.initialize_model(500,nissues, ncandidates, δ=20, κ = 0, switch =
 :runoff, ω = 0.8, kappa_switch= :off)
 
 
@@ -29,8 +29,12 @@ m.properties
 
 m.properties
 
-visualize_simpler(m)
+k,n =  visualize_simpler_pluscustom(m)
+k[1].val
+n.val
 
+k[1].val
+n.val
 
 pla.dictmap(pla.proportionmap,(m.properties[:voterBallotTracker]))
 m.properties[:withinpartyshares]
@@ -38,6 +42,7 @@ m.properties[:withinpartyshares]
 # so maybe im not updating the withinpartyshares correctly and this leads
 # to some weird behavior downstream
 
+# Save data for quick plotting
 
 
 
