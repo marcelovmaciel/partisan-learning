@@ -475,6 +475,10 @@ function get_keep_party_id_prob(agentid,model)
         keep_party_id_prob = proportion_IvotedForThisParty * proportion_peers_like_me
     end
 
+    if (in(agentid,model.properties[:parties_ids])) || (model[agentid].amIaCandidate)
+        keep_party_id_prob = 1.0
+    end
+
     return(keep_party_id_prob)
 end
 

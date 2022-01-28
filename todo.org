@@ -105,4 +105,7 @@ about describing the comparative statics in a non-formal way.
 
 
 
-* TODO check once again what is happening with the like_me procedure
+
+
+
+* TODO plot the within party shares and prop people like me

@@ -58,17 +58,18 @@ function visualize_m(m)
     end
     fig,adf,mdf = abm_data_exploration(m, dummystep, newstep)
     ax = Axis(fig[1,2])
-    autolimits!(ax)
     for i in var_wanna_observe[1:end]
         lines!(ax, nsteps, i, linewidth = 0.5)
         autolimits!(ax)
     end
-#return(ax)
+
 end
 
 
 m = initialize_model()
 ax = visualize_m(m)
+
+
 
 
 ax

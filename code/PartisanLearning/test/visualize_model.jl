@@ -129,7 +129,7 @@ function visualize_simpler(m)
                                      mlabels,
                                      ac = agent_colors,
                                      as = agent_size,
-                                     am = agent_marker,  spu = 1 )
+                                     am = agent_marker,  spu = 1:100 )
 
 
   #keep_pid_probs = [pla.get_keep_party_id_prob(i,m) for i in  allids(m)]
@@ -156,6 +156,68 @@ function visualize_simpler(m)
   #                                       ac = agent_colors,
   #                                    as = agent_size, spu = 1 )
   #   hist(fig[1,3], foo)
+
+
+
+end
+
+
+
+
+function visualize_noslider(m, spu = 1:100)
+    # FIXME: getting a problem now that initial condition is only initial lol
+    pla.model_step!(m)
+
+    function agent_colors(a)
+
+        if a.id == m.properties[:incumbent_party]
+            :yellow
+        elseif a.myPartyId == m.properties[:parties_ids][1]
+            :red
+        else :blue
+        end
+
+        end
+    agent_size(a) = a.id == m.properties[:incumbent_party]  ? 25 : (a.id in m.properties[:parties_ids] ? 20 : (a.amIaCandidate ? 15 : 5))
+    agent_marker(a) = if a.id in m.properties[:parties_ids] '♠' else '∘' end
+
+  #higher kappa means agents will tend to vote more for
+  #their partyid. Conversely, lower kappa means people vote more
+  # for candidates closer to then rather than closer to their party
+  # higher δ means parties sample further from their location.
+  # both depended upon the underlying boundaries! think about that !!!
+
+  # adata = [#(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+  #          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+
+
+    adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
+    mdata = [ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
+            #pla.get_incumbent_eccentricity,
+            #pla.get_mean_contestant_eccentricity]
+
+  #          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
+  #
+  #          x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
+  #          pla.get_incumbent_eccentricity,
+  #          pla.get_mean_contestant_eccentricity]
+#pla.normalized_ENP,
+    alabels = ["keep party prob"]
+    mlabels = ["PSwitches"]
+  # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
+#"NENP",
+  fig,adf,mdf = abm_data_exploration(m,
+                                     pla.abm.dummystep,
+                                     pla.model_step!;
+                                     adata,
+                                     mdata,
+                                     alabels,
+                                     mlabels,
+                                     ac = agent_colors,
+                                     as = agent_size,
+                                     am = agent_marker,  spu = spu )
+
+
 
 
 

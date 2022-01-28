@@ -19,10 +19,14 @@ include("../test/visualize_model.jl")
 ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(500,nissues, ncandidates, δ=20, κ = 0, switch =
-:runoff, ω = 0.8, kappa_switch= :off)
+m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 75, switch =:runoff,
+                         ω = 0.8, kappa_switch= :off)
+
 
 visualize_simpler(m)
+
+
+
 visualize_m(m)
 
 
