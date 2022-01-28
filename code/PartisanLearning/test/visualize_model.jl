@@ -106,6 +106,8 @@ function visualize_simpler(m)
 
     adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
     mdata = [ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
+            #pla.get_incumbent_eccentricity,
+            #pla.get_mean_contestant_eccentricity]
 
   #          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
   #
@@ -254,4 +256,33 @@ function visualize_simpler_pluscustom(m)
     autolimits!(fig[1,3])
 return(keep_pid_probs, N)
 
+end
+
+
+
+
+
+function visualize_m(m)
+    pla.model_step!(m)
+    fig,adf,mdf = abm_data_exploration(m,
+                                       pla.abm.dummystep,
+                                       pla.model_step!)
+    var_wanna_observe = [Observable([pla.get_keep_party_id_prob(i,m)])
+                                    for i in  allids(m)]
+    nsteps = Observable([0.])
+    function newstep(m, var_wanna_observe = var_wanna_observe, nsteps = nsteps)
+        pla.model_step!(m)
+        var_values = [pla.get_keep_party_id_prob(i,m) for i in  allids(m)]
+        for (i,v) in enumerate(var_values)
+            push!(var_wanna_observe[i].val, v)
+        end
+        nsteps[] = push!(nsteps.val,nsteps.val[end]+ 1.)
+    end
+    fig,adf,mdf = abm_data_exploration(m, dummystep, newstep)
+    ax = Axis(fig[1,2])
+    for i in var_wanna_observe[1:end]
+        lines!(ax, nsteps, i, linewidth = 0.5)
+        autolimits!(ax)
+    end
+    autolimits!(ax)
 end

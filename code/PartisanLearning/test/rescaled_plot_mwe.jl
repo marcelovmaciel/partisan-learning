@@ -57,14 +57,24 @@ function visualize_m(m)
         nsteps[] = push!(nsteps.val,nsteps.val[end]+ 1.)
     end
     fig,adf,mdf = abm_data_exploration(m, dummystep, newstep)
-    scatter(fig[1,2], nsteps, var_wanna_observe[1])
-    lines!(fig[1,2],nsteps, var_wanna_observe[1])
-    for i in var_wanna_observe[2:end]
-        scatter!(fig[1,2], nsteps, i)
-        lines!(fig[1,2], nsteps, i)
+    ax = Axis(fig[1,2])
+    autolimits!(ax)
+    for i in var_wanna_observe[1:end]
+        lines!(ax, nsteps, i, linewidth = 0.5)
+        autolimits!(ax)
     end
+#return(ax)
 end
 
 
 m = initialize_model()
-visualize_m(m)
+ax = visualize_m(m)
+
+
+ax
+
+
+ax.xaxislinks
+ax.targetlimits.val |>  typeof |> fieldnames
+
+ax.targetlimits.val.widths |> Tuple

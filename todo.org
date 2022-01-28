@@ -103,5 +103,6 @@ sure of exactly how the different pieces of the model work. Then I'll worry
 about describing the comparative statics in a non-formal way.
 #+end_quote
 
-* TODO collect and visualize the probability of agreement between voter party ID and vote choice
-- He seems to want the probability of keeping party id!!
+
+
+* TODO check once again what is happening with the like_me procedure

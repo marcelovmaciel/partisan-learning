@@ -16,25 +16,16 @@ include("../test/visualize_model.jl")
 
 # ** Try to analyze
 
-pla.dist.euclidean([50,50], [100,100])
-
 ncandidates = 2
 nissues = 2
 
 m = pla.initialize_model(500,nissues, ncandidates, δ=20, κ = 0, switch =
 :runoff, ω = 0.8, kappa_switch= :off)
 
+visualize_simpler(m)
+visualize_m(m)
 
-m.properties
 
-m.properties
-
-k,n =  visualize_simpler_pluscustom(m)
-k[1].val
-n.val
-
-k[1].val
-n.val
 
 pla.dictmap(pla.proportionmap,(m.properties[:voterBallotTracker]))
 m.properties[:withinpartyshares]

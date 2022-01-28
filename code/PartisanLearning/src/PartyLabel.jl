@@ -568,8 +568,6 @@ end
 
 
 
-#FIXME: Double-check if I update the model.properties[:parties_candidateid_ppos_δ][:partycandidate]!!!
-# I believe it does update with set_candidates! though. Nevertheless, check
 function model_step!(model)
     candidates_iteration_setup!(model)
 
