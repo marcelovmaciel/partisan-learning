@@ -13,9 +13,6 @@ Also, the update rule is completely different now.
 See the notes/sketchsofaModel/partyid-sketch.pdf design
 document for more on that.
 =#
-
-
-
 module PartyLabel
 # ** Initial condition
 #= the initial logic is the following:
@@ -39,7 +36,7 @@ using PythonCall
 using Random
 import CSV
 using ProgressMeter
-
+using Distributions
 
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
@@ -64,11 +61,32 @@ const bounds = (0,100)
 end
 
 
+function sample_uniform_pos(nissues = 2)
+Tuple(rand(distri.Uniform(bounds...),nissues))
+end
+
+
+function sample_1dnormal(bound)
+    #=
+    - I'll simply put a constant in one dimension and work on the other lol.
+- I'll use cohen d to define overlapping distributions:
+  - As shown here [[https://rpsychologist.com/cohend/][Interpreting Cohen&#x27;s d | R Psychologist]] a cohen d of 1.35 gives an overlap of 50%.
+- Thus if I have a distribution of (43,10) I gotta have the other as (56.5,10)
+=#
+    if rand([false,true])
+        pos = (rand(Normal(43.25,10)), bound[2]/2 )
+    else
+        pos = (rand(Normal(56.75,10)),bound[2]/2 )
+    end
+    return(pos)
+end
+
+
 function Voter(id::Int;nissues =  1,
-               pos = Tuple(rand(distri.Uniform(bounds...),nissues)), κ = 10.)
+               pos = () -> sample_uniform_pos(nssissues), κ = 10.)
     amIaCandidate = false
     myPartyId = -3
-    return(Voter{nissues}(id,pos,amIaCandidate, κ, myPartyId))
+    return(Voter{nissues}(id,pos(),amIaCandidate, κ, myPartyId))
 end
 
  function dictmap(l,d)
@@ -315,8 +333,15 @@ function get_median_pos(m)
 
 
 function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 2., δ=1.,  switch= :random,  seed = 125, ω = 0.8, kappa_switch = :off)
-    space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues), periodic = false)
+                          κ = 2., δ=1.,  switch= :random,  seed = 125, ω = 0.8, kappa_switch = :off,
+                           special_bounds = (false, bounds), voter_pos_initializor = () -> sample_1dnormal(special_bounds[2]))
+    if special_bounds[1] == true
+        space = abm.ContinuousSpace(special_bounds[2], periodic = false)
+    else
+        space = abm.ContinuousSpace(ntuple(x -> float(last(bounds)),nissues), periodic = false)
+    end
+
+
     rng = Random.MersenneTwister(seed)
     # postype = typeof(ntuple(x -> 1.,nissues))
 
@@ -355,12 +380,13 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :keep_probs => [[1.,1]],
                       :party_switches => [0],
                       :median_pos => [],
-                      :kappa_switch => :off)
+                      :kappa_switch => kappa_switch,
+                      :is_at_step => 0)
 
     model = abm.ABM(Voter{nissues}, space; rng,properties = properties)
 
     for i in 1:nagents
-        vi = Voter(i, nissues=nissues, κ = model.properties[:κ])
+        vi = Voter(i, nissues=nissues, κ = model.properties[:κ], pos = voter_pos_initializor)
         abm.add_agent_pos!(vi, model)
     end
     model.properties[:parties_candidateid_ppos_δ] = sample_parties_pos(nparties,
@@ -386,6 +412,16 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
 end
 
 
+
+function assume_initial_partyid!(i, m)
+
+
+    pairs = collect(proportionmap(m.properties[:voterBallotTracker][719]))
+    vals = first.(pairs)
+    weights = last.(pairs)
+    which_party_id_to_assume = sample(vals, Weights(weights))
+    i.myPartyId = which_party_id_to_assume
+end
 
 # ** Stepping
 #=

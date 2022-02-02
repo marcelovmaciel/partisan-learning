@@ -11,23 +11,29 @@ const pla = pl.PartyLabel
 using GLMakie
 using Agents
 import Distances
+
 include("../test/visualize_model.jl")
 
-
-# ** Try to analyze
+ # ** Try to analyze
 
 ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 75, switch =:runoff,
-                         ω = 0.8, kappa_switch= :off)
+m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 25, switch =:runoff,
+                         ω = 0.8, kappa_switch= :off,special_bounds = (true, (100., 5.)))
+
+for (i,j) in zip(collect(pla.proportionmap(m.properties[:voterBallotTracker][719])))
+    i
+end
 
 
+#visualize_noslider(m)
 visualize_simpler(m)
 
+pla.dist.euclidean((0,2), (100,2))
 
 
-visualize_m(m)
+
 
 
 

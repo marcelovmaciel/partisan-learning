@@ -103,9 +103,12 @@ sure of exactly how the different pieces of the model work. Then I'll worry
 about describing the comparative statics in a non-formal way.
 #+end_quote
 
-
-
-
-
-
 * TODO plot the within party shares and prop people like me
+
+* DONE implement the new distributional assumption;
+- I'll simply put a constant in one dimension and work on the other lol.
+- I'll use cohen d to define overlapping distributions:
+  - As shown here [[https://rpsychologist.com/cohend/][Interpreting Cohen&#x27;s d | R Psychologist]] a cohen d of 1.35 gives an overlap of 50%.
+- Thus if I have a distribution of (43,10) I gotta have the other as (56.5,10)
+
+* implement the new initial party id
