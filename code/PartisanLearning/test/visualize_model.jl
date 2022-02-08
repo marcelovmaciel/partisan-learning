@@ -106,7 +106,8 @@ function visualize_simpler(m)
 
     adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
     mdata = [m -> pla.get_party_supporters_mean(m.properties[:parties_ids][1], m),
-             m -> pla.get_party_supporters_mean(m.properties[:parties_ids][2], m)]
+             m -> pla.get_party_supporters_mean(m.properties[:parties_ids][2], m),
+             pla.get_2candidates_distance]
         #[ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
             #pla.get_incumbent_eccentricity,
             #pla.get_mean_contestant_eccentricity]
@@ -118,7 +119,7 @@ function visualize_simpler(m)
   #          pla.get_mean_contestant_eccentricity]
 #pla.normalized_ENP,
     alabels = ["keep party prob"]
-    mlabels = ["Mean Base Party1", "Mean Base Party2"]
+    mlabels = ["Mean Base Party1", "Mean Base Party2", "dist(c1,c2)"]
   # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 #"NENP",
   fig,adf,mdf = abm_data_exploration(m,

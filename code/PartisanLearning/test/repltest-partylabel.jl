@@ -27,7 +27,7 @@ nissues = 2
 # 50 + 20.25/2
 
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 15, switch =:runoff,
+m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 25., switch =:runoff,
                          ω = 0.8, kappa_switch= :off,special_bounds = (true, (100., 5.)))
 
 #visualize_noslider(m)

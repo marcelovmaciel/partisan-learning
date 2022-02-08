@@ -739,6 +739,14 @@ function get_party_supporters_mean(pid, m, whichdim = 1 )
     mean(vcat(map(x->collect(m[x].pos[whichdim]), party_supporters)...))
 end
 
+function get_2candidates_distance(m)
+    parties = m.properties[:parties_ids]
+    candidate1_pos = m[m.properties[:parties_candidateid_ppos_δ][parties[1]][:partycandidate]].pos
+    candidate2_pos = m[m.properties[:parties_candidateid_ppos_δ][parties[2]][:partycandidate]].pos
+    dist.euclidean(candidate1_pos,
+                   candidate2_pos)
+end
+
 
 
 
