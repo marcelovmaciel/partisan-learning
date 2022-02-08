@@ -19,15 +19,21 @@ include("../test/visualize_model.jl")
 ncandidates = 2
 nissues = 2
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 25, switch =:runoff,
+# (mu - mu) / 15 = 1.35
+
+# 1.35 * 15
+
+# 50 - 20.25/2
+# 50 + 20.25/2
+
+
+m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 15, switch =:runoff,
                          ω = 0.8, kappa_switch= :off,special_bounds = (true, (100., 5.)))
 
-for (i,j) in zip(collect(pla.proportionmap(m.properties[:voterBallotTracker][719])))
-    i
-end
-
-
 #visualize_noslider(m)
+
+
+
 visualize_simpler(m)
 
 pla.dist.euclidean((0,2), (100,2))

@@ -65,18 +65,30 @@ function sample_uniform_pos(nissues = 2)
 Tuple(rand(distri.Uniform(bounds...),nissues))
 end
 
+standard_1d_poss = (Normal(43.25,10), Normal(56.75,10))
+more_dispersed_1d_poss = (Normal(50 - 20.25/2,15),
+                          Normal(50 + 20.25/2,15))
 
-function sample_1dnormal(bound)
+function sample_1dnormal(bound, poss = standard_1d_poss)
+
     #=
-    - I'll simply put a constant in one dimension and work on the other lol.
+    - I'll simply put a constant in one dimension and work on the other lol.ap
 - I'll use cohen d to define overlapping distributions:
   - As shown here [[https://rpsychologist.com/cohend/][Interpreting Cohen&#x27;s d | R Psychologist]] a cohen d of 1.35 gives an overlap of 50%.
 - Thus if I have a distribution of (43,10) I gotta have the other as (56.5,10)
 =#
     if rand([false,true])
-        pos = (rand(Normal(43.25,10)), bound[2]/2 )
+        pos = (rand(poss[1]), bound[2]/2 )
+        if pos[1] < 0.0
+            pos = (0.01, bound[2]/2 )
+        end
+
+
     else
-        pos = (rand(Normal(56.75,10)),bound[2]/2 )
+        pos = (rand(poss[2]),bound[2]/2 )
+        if pos[1] > 100
+            pos = (99.999, bound[2]/2 )
+            end
     end
     return(pos)
 end
@@ -720,6 +732,15 @@ function get_mean_contestant_eccentricity(m)
                                     m.properties[:median_pos])) |>
                                         mean)
 end
+
+
+function get_party_supporters_mean(pid, m, whichdim = 1 )
+    party_supporters = get_parties_supporters(m)[pid]
+    mean(vcat(map(x->collect(m[x].pos[whichdim]), party_supporters)...))
+end
+
+
+
 
 # function static_preplot!(ax,m)
 
