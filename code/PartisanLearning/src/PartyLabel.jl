@@ -570,12 +570,12 @@ function get_new_supporters(model, old_supporters)
     return(new_supporters)
 end
 
-function get_mean_among_supporters(supporters, model)
+function get_mean_among_supporters(supporters::Vector, model)
+
         [mean(model[i].pos[issue]
               for i in supporters)
          for issue in 1:model.properties[:nissues]]
 end
-
 
 
 function get_new_parties_poss(model, new_supporters, old_supporters)
@@ -583,10 +583,13 @@ function get_new_parties_poss(model, new_supporters, old_supporters)
 
     mean_previous_supporters = dictmap(v->get_mean_among_supporters(v,model),
                                        old_supporters )
-
+    new_supporters = kvdictmap((k,v)-> isempty(v) ? old_supporters[k] : v, new_supporters)
+    # if any(values(dictmap(isempty,new_supporters)))
+    #               mean_new_supporters = mean_previous_supporters
+    # else
     mean_new_supporters = dictmap(v->get_mean_among_supporters(v,model),
                                   new_supporters)
-
+    #end
     kvdictmap((k,v)-> (ω .* v .+ ((1-ω) .* mean_new_supporters[k])) |> Tuple, mean_previous_supporters )
 
 end
@@ -648,7 +651,9 @@ function model_step!(model)
 
     end
 
-    newposs = get_new_parties_poss(model,get_parties_supporters(model), old_supporters )
+    newposs = get_new_parties_poss(model,
+                                   get_new_supporters(model,old_supporters),
+                                   old_supporters )
     set_new_parties_poss!(model,newposs)
 end
 

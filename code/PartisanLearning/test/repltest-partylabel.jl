@@ -27,13 +27,13 @@ nissues = 2
 # 50 + 20.25/2
 
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 25., switch =:runoff,
-                         ω = 0.8, kappa_switch= :off,special_bounds = (true, (100., 5.)))
+m = pla.initialize_model(1000,nissues, ncandidates, δ=10, κ = 20., switch =:runoff,
+                         ω = 0.1, kappa_switch= :off,special_bounds = (true, (100., 5.)))
 
 #visualize_noslider(m)
 
-
-
+# FIXME: there seems to be a discompass between party position and candidate position
+# This is most likely due to me missing some update of the party position upstream
 visualize_simpler(m)
 
 pla.dist.euclidean((0,2), (100,2))
