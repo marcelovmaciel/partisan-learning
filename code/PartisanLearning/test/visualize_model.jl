@@ -3,7 +3,7 @@ using InteractiveDynamics
 
  function visualize_model(m)
     # FIXME: getting a problem now that initial condition is only initial lol
-    pla.model_step!(m)
+
 
     params = Dict(:κ => 0.0:10:70, :switch => [:random, :plurality, :runoff],
                   :δ => 0.0:10:70,
@@ -75,9 +75,13 @@ haveiswitched(agent::pla.Voter, m) = haveiswitched(agent.id,m)
 function visualize_simpler(m)
     # FIXME: getting a problem now that initial condition is only initial lol
     pla.model_step!(m)
+     pla.model_step!(m)
+     pla.model_step!(m)
+     pla.model_step!(m)
+
 
     params = Dict(:κ => 0.0:1:100.0, :switch => [:random, :plurality, :runoff],
-                  :δ => 0.0:10:70,
+                  :δ => 0.0:5:70,
                   :ω => 0.0:0.1:1.0,
                   :kappa_switch => [:off, :on])
 
@@ -170,7 +174,7 @@ function visualize_simpler_1d(m)
     pla.model_step!(m)
 
     params = Dict(:κ => 0.0:1:100.0, :switch => [:random, :plurality, :runoff],
-                  :δ => 0.0:10:70,
+                  :δ => 0.0:5.:70,
                   :ω => 0.0:0.1:1.0,
                   :kappa_switch => [:off, :on])
 

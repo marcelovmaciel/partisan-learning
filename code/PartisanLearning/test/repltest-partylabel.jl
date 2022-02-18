@@ -11,6 +11,7 @@ const pla = pl.PartyLabel
 using GLMakie
 using Agents
 import Distances
+using Debugger
 
 include("../test/visualize_model.jl")
 
@@ -26,30 +27,46 @@ nissues = 2
 # 50 - 20.25/2
 # 50 + 20.25/2
 
-
-m = pla.initialize_model(1000,nissues, ncandidates, δ=10, κ = 20., switch =:runoff,
-                         ω = 0.1, kappa_switch= :off,special_bounds = (true, (100., 5.)))
+m = pla.initialize_model(1000,nissues, ncandidates, δ=5, κ = 16., switch =:runoff,
+                         ω = 0.8, kappa_switch= :off,special_bounds = (true, (100., 5.)))
 
 #visualize_noslider(m)
 
 # FIXME: there seems to be a discompass between party position and candidate position
 # This is most likely due to me missing some update of the party position upstream
 visualize_simpler(m)
+# FIXME: fix visualization or find bug in code
+#m.properties[:parties_ids]
+
+pla.model_step!(m)
 
 pla.dist.euclidean((0,2), (100,2))
 
 
-
-
-
-
 pla.dictmap(pla.proportionmap,(m.properties[:voterBallotTracker]))
 m.properties[:withinpartyshares]
+
+
+
 # FIXME: doesnt make sense given the voterballot tracker
 # so maybe im not updating the withinpartyshares correctly and this leads
 # to some weird behavior downstream
 
 # Save data for quick plotting
+
+for i in pla.abm.allids(m)
+    m[i].myPartyId |> println
+end
+
+
+m.properties[:voterBallotTracker]
+
+m.properties[:parties_ids]
+
+m.properties[:voters_partyids]
+
+m.properties
+
 
 
 

@@ -127,6 +127,23 @@ function sample_parties_pos(nparties, model)
 end
 
 
+function simple_sample_candidates(party, m, n=1)
+    sample(
+        collect(abm.nearby_ids(m[party], m, m.properties[:δ],
+                                  exact = true)),n)
+end
+
+function simple_select_primariesCandidates(model::abm.ABM, n =1)
+
+    party_candidate_pairs = (
+        model.properties[:parties_ids] .|>
+            (pid -> Pair(pid,simple_sample_candidates(pid,model, n))) |>
+            Dict)
+
+      return(party_candidate_pairs)
+end
+
+
 function sample_candidates(party,m,n=4)
     δ = m.properties[:δ]
 
@@ -154,16 +171,53 @@ function get_plurality_result(primariesresult::Dict)
 end
 
 
-function get_plurality_result(m::abm.ABM)
-    candidates = select_primariesCandidates(m)
-    primariesresult = get_primaries_votes(m,candidates)
-    get_plurality_result(primariesresult)
+
+function get_plurality_result(m::abm.ABM, seconditer_switch=false)
+    if seconditer_switch
+        primariesresult = secondIt_get_primaries_votes(m)
+        result = get_plurality_result(primariesresult)
+    else
+
+        candidates = select_primariesCandidates(m)
+        primariesresult = get_primaries_votes(m,candidates)
+        result = get_plurality_result(primariesresult)
+    end
+    return(result)
 end
 
-function get_runoff_result(primariesresult,m)
-    primariesproportion = dictmap(proportionmap
-                                  ,primariesresult)
-    function runoff(k,v)
+function get_runoff_result(;primariesresult=primariesresult,m=m, seconditer_switch = false)
+
+    #println(m)
+    if seconditer_switch
+        #println(primariesresult)
+        primariesproportion = dictmap(proportionmap
+                                      ,primariesresult)
+        function runoff(k,v)
+            if any(x->x>0.5,values(v))
+            #println(v)
+            argmax(v)
+            else
+             #    println(secondIt_get_parties_supporters(m)[k])
+                 toptwo = sort(collect(v),
+                               by=x->x[2],
+                               rev = true)[1:2] .|> x->x[1]
+                 (map(x->get_closest_fromList(x,toptwo,m),
+                  secondIt_get_parties_supporters(m)[k]) |>
+                      proportionmap |>
+                      argmax)
+            end
+        end
+
+
+
+        return(kvdictmap(runoff, primariesproportion))
+
+    else
+
+        primariesproportion = dictmap(proportionmap
+                                      ,primariesresult)
+
+    function runoff2(k,v)
              if any(x->x>0.5,values(v))
                  argmax(v)
              else
@@ -176,16 +230,32 @@ function get_runoff_result(primariesresult,m)
                       argmax)
              end
     end
-    kvdictmap(runoff, primariesproportion)
+        return(kvdictmap(runoff2, primariesproportion))
+    end
 end
 
 
-function get_runoff_result(m)
-    candidates = select_primariesCandidates(m)
-    primariesresult = get_primaries_votes(m,candidates)
 
-    get_runoff_result(primariesresult,m)
+function get_runoff_result(m, seconditer_switch = false)
+    if seconditer_switch
+
+    primariesresult = secondIt_get_primaries_votes(m)
+
+
+    runoffresult = get_runoff_result(primariesresult=primariesresult,m=m, seconditer_switch=seconditer_switch)
+
+    else
+        candidates = select_primariesCandidates(m)
+
+        primariesresult = get_primaries_votes(m,candidates)
+        #println(primariesresult)
+        runoffresult =  get_runoff_result(primariesresult=primariesresult,m=m, seconditer_switch=seconditer_switch)
+
+    end
+
+    return(runoffresult)
 end
+
 
 # FIXME: Should create a radius  + m.properties[:parties_ids] version
 function get_random_candidates(m)
@@ -201,20 +271,38 @@ end
 
 function set_candidates!(model, switch)
 
-    if switch == :runoff
-        candidateids = get_runoff_result(model)
+    if switch == :initial
+
+        candidateids = simple_select_primariesCandidates(model)
+
+    elseif switch == :second
+        if model.properties[:switch] == :runoff
+            candidateids = get_runoff_result(model,
+                                             true)
+        elseif model.properties[:switch] == :plurality
+            candidateids = get_plurality_result(model, true)
+        end
+    elseif switch == :runoff
+        candidateids = get_runoff_result(model,
+                                        false)
     elseif switch == :plurality
         candidateids = get_plurality_result(model)
     else
         candidateids = get_random_candidates(model)
     end
 
-
     for (pid, candidateid) in candidateids
+        if typeof(candidateid) <: Array
+            candidateid = first(candidateid)
+        end
 
         model[candidateid].amIaCandidate = true
+
         model[candidateid].myPartyId = pid
+
+        # TODO: i forgot to update that somewhere!
         model.properties[:parties_candidateid_ppos_δ][pid][:partycandidate] = candidateid
+
     end
 
 end
@@ -264,14 +352,53 @@ function get_closest_fromList(agentid,candidate_list,model)
 end
 
 
+function secondIt_get_parties_supporters(model)
+    overall_placeholder = []
+    for k in model.properties[:parties_ids]
+        placeholder = []
+        for agent in abm.allids(model)
+            if model.properties[:voterBallotTracker][agent][end] == k
+                push!(placeholder, agent)
+            end
+            push!(overall_placeholder, Pair(k, placeholder))
+        end
+    end
+        return(Dict(overall_placeholder))
+end
+
+
+function get_parties_supporters(model)
+    Dict(
+        Pair(k,
+             collect(keys(filter(t->t[2]==k,
+                    model.properties[:voters_partyids]))))
+        for k in model.properties[:parties_ids])
+end
+
+
+function secondIt_get_primaries_votes(m,
+                                      primariesCandidatesDict = simple_select_primariesCandidates(m,4))
+
+    parties_supporters = secondIt_get_parties_supporters(m)
+
+    get_closest_toI(i) = get_closest_fromList(i,
+                         primariesCandidatesDict[m.properties[:voterBallotTracker][i][end]],
+                                              m)
+
+    return(dictmap(supporters->map(get_closest_toI,supporters),
+                parties_supporters))
+end
+
 function get_primaries_votes(m, primariesCandidatesDict)
     parties_supporters = get_parties_supporters(m)
+    # FIXME: im getting an error here
     get_closest_toI(i) = get_closest_fromList(i,
                          primariesCandidatesDict[m[i].myPartyId],
                                               m)
     return(dictmap(supporters->map(get_closest_toI,supporters),
                 parties_supporters))
 end
+
 
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
@@ -293,14 +420,6 @@ function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
    return(argmax(proportionmap(closest_candidates))) # argmax will return only one maximal, beware of that!
 end
 
-
-function get_parties_supporters(model)
-    Dict(
-        Pair(k,
-             collect(keys(filter(t->t[2]==k,
-                    model.properties[:voters_partyids]))))
-        for k in model.properties[:parties_ids])
-end
 
 function get_withinpartyshares(model)
     #= This function is very important and calculates the proportion
@@ -408,13 +527,13 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
         model.properties[:parties_ids][i]=v
     end
 
-    for i in abm.allids(model)
-        mypartyid = get_closest_fromList(i,model.properties[:parties_ids],model)
-        model[i].myPartyId = mypartyid
-    end
+    # for i in abm.allids(model)
+    #     mypartyid = get_closest_fromList(i,model.properties[:parties_ids],model)
+    #     model[i].myPartyId = mypartyid
+    # end
 
     model.properties[:voters_partyids] = Dict(
-        (model[x].id => model[x].myPartyId)
+        (model[x].id => -1)
         for x in abm.allids(model))
 
     initialize_incumbent_streak_counter!(model)
@@ -426,13 +545,16 @@ end
 
 
 function assume_initial_partyid!(i, m)
-
-
-    pairs = collect(proportionmap(m.properties[:voterBallotTracker][719]))
+    if m.properties[:is_at_step] == 4
+    pairs = collect(proportionmap(m.properties[:voterBallotTracker][i]))
     vals = first.(pairs)
     weights = last.(pairs)
     which_party_id_to_assume = sample(vals, Weights(weights))
-    i.myPartyId = which_party_id_to_assume
+    m[i].myPartyId = which_party_id_to_assume
+    m.properties[:voters_partyids][i] = m[i].myPartyId
+    else
+        nothing
+    end
 end
 
 # ** Stepping
@@ -453,9 +575,9 @@ end
 
 
 "candidates_iteration_setup!(model::abm.ABM)"
-function candidates_iteration_setup!(m::abm.ABM)
+function candidates_iteration_setup!(m::abm.ABM, switch)
     reset_candidates!(m)
-    set_candidates!(m, m.properties[:switch])
+    set_candidates!(m, switch)
 end
 
 
@@ -624,37 +746,66 @@ end
 
 
 function model_step!(model)
-    candidates_iteration_setup!(model)
 
-    old_supporters = get_parties_supporters(model) |> copy
-    set_agents_new_κ!(model, model.properties[:kappa_switch])
-    new_winner_party = model[getmostvoted(model, :iteration)].myPartyId
+    model.properties[:is_at_step] += 1
+    if model.properties[:is_at_step] == 1
+        candidates_iteration_setup!(model, :initial)
+        for i in abm.allids(model)
+            candidates = map(x->x[:partycandidate], values(model.properties[:parties_candidateid_ppos_δ]))
 
-    model.properties[:incumbent_streak_counter].old_incumbentholder = model.properties[:incumbent_party]
-    model.properties[:incumbent_party] = new_winner_party
-    update_streakCounter!(model)
-    for i in abm.allids(model)
-        party_i_votedfor = get_whichCandidatePartyAgentVotesfor(i,model)[2]
-        push!(model.properties[:voterBallotTracker][i], party_i_votedfor )
+            myvote = get_closest_fromList(i,candidates,model)
+            # println(model.properties[:voterBallotTracker])
+            # println(model.properties[:voterBallotTracker][i])
+            # println(model[myvote].myPartyId)
+            # FIXME: something broken here
+            push!(model.properties[:voterBallotTracker][i], model[myvote].myPartyId)
+
+        end
+
+    elseif (model.properties[:is_at_step] == 2) || (model.properties[:is_at_step] == 3)
+        candidates_iteration_setup!(model, :second)
+        for i in abm.allids(model)
+            candidates = map(x->x[:partycandidate], values(model.properties[:parties_candidateid_ppos_δ]))
+            myvote = get_closest_fromList(i,candidates,model)
+            push!(model.properties[:voterBallotTracker][i], model[myvote].myPartyId)
+        end
+
+    else
+        for i in abm.allids(model) assume_initial_partyid!(i, model) end
+        candidates_iteration_setup!(model, model.properties[:switch])
+        old_supporters = get_parties_supporters(model) |> copy
+        set_agents_new_κ!(model, model.properties[:kappa_switch])
+        new_winner_party = model[getmostvoted(model, :iteration)].myPartyId
+
+        model.properties[:incumbent_streak_counter].old_incumbentholder = model.properties[:incumbent_party]
+        model.properties[:incumbent_party] = new_winner_party
+        update_streakCounter!(model)
+        for i in abm.allids(model)
+            party_i_votedfor = get_whichCandidatePartyAgentVotesfor(i,model)[2]
+            push!(model.properties[:voterBallotTracker][i], party_i_votedfor )
+        end
+        model.properties[:withinpartyshares] = get_withinpartyshares(model)
+
+        push!(model.properties[:party_switches], 0)
+        push!(model.properties[:keep_probs], [])
+        #=In this loop agents deal with their new choice
+        #of candidate by updating their partyid =#
+        for i in abm.allids(model)
+            keep_prob = get_keep_party_id_prob(i,model)
+            push!(model.properties[:keep_probs][end], keep_prob)
+            update_partyid!(i,model,keep_prob)
+            model.properties[:voters_partyids][i] = model[i].myPartyId
+
+        end
+
+        newposs = get_new_parties_poss(model,
+                                       get_new_supporters(model,old_supporters),
+                                       old_supporters )
+        set_new_parties_poss!(model,newposs)
     end
-    model.properties[:withinpartyshares] = get_withinpartyshares(model)
+    # TODO: put all the logic into the conditional!
+    # I can't use kappa logic if agents don't have parties!!!!
 
-    push!(model.properties[:party_switches], 0)
-    push!(model.properties[:keep_probs], [])
-    #=In this loop agents deal with their new choice
-    #of candidate by updating their partyid =#
-    for i in abm.allids(model)
-        keep_prob = get_keep_party_id_prob(i,model)
-        push!(model.properties[:keep_probs][end], keep_prob)
-        update_partyid!(i,model,keep_prob)
-        model.properties[:voters_partyids][i] = model[i].myPartyId
-
-    end
-
-    newposs = get_new_parties_poss(model,
-                                   get_new_supporters(model,old_supporters),
-                                   old_supporters )
-    set_new_parties_poss!(model,newposs)
 end
 
 
