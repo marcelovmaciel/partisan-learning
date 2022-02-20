@@ -85,13 +85,17 @@ function visualize_simpler(m)
                   :ω => 0.0:0.1:1.0,
                   :kappa_switch => [:off, :on])
 
+    p1 = m.properties[:parties_ids][1]
+    p2 = m.properties[:parties_ids][2]
+
     function agent_colors(a)
 
         if a.id == m.properties[:incumbent_party]
             :yellow
-        elseif a.myPartyId == m.properties[:parties_ids][1]
+        elseif a.myPartyId == p1
             :red
-        else :blue
+        elseif  a.myPartyId == p2
+            :blue
         end
 
         end
@@ -109,8 +113,8 @@ function visualize_simpler(m)
 
 
     adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
-    mdata = [m -> pla.get_party_supporters_mean(m.properties[:parties_ids][1], m),
-             m -> pla.get_party_supporters_mean(m.properties[:parties_ids][2], m),
+    mdata = [m-> m[m.properties[:parties_ids][1] ].pos[1],
+             m -> m[m.properties[:parties_ids][2] ].pos[1],
              pla.get_2candidates_distance]
         #[ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
             #pla.get_incumbent_eccentricity,
@@ -123,7 +127,7 @@ function visualize_simpler(m)
   #          pla.get_mean_contestant_eccentricity]
 #pla.normalized_ENP,
     alabels = ["keep party prob"]
-    mlabels = ["Mean Base Party1", "Mean Base Party2", "dist(c1,c2)"]
+    mlabels = ["Party1Pos", "Party2Pos", "dist(c1,c2)"]
   # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 #"NENP",
   fig,adf,mdf = abm_data_exploration(m,

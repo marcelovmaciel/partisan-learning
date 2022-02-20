@@ -400,6 +400,7 @@ function get_primaries_votes(m, primariesCandidatesDict)
 end
 
 
+
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
 
@@ -527,6 +528,11 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
         model.properties[:parties_ids][i]=v
     end
 
+    for id in model.properties[:parties_ids]
+        model[id].myPartyId = id
+    end
+
+
     # for i in abm.allids(model)
     #     mypartyid = get_closest_fromList(i,model.properties[:parties_ids],model)
     #     model[i].myPartyId = mypartyid
@@ -545,7 +551,7 @@ end
 
 
 function assume_initial_partyid!(i, m)
-    if m.properties[:is_at_step] == 4
+    if (m.properties[:is_at_step] == 4) && (!in(i,m.properties[:parties_ids]))
     pairs = collect(proportionmap(m.properties[:voterBallotTracker][i]))
     vals = first.(pairs)
     weights = last.(pairs)
@@ -705,11 +711,11 @@ function get_new_parties_poss(model, new_supporters, old_supporters)
 
     mean_previous_supporters = dictmap(v->get_mean_among_supporters(v,model),
                                        old_supporters )
-    new_supporters = kvdictmap((k,v)-> isempty(v) ? old_supporters[k] : v, new_supporters)
+    # new_supporters = kvdictmap((k,v)-> isempty(v) ? old_supporters[k] : v, new_supporters)
     # if any(values(dictmap(isempty,new_supporters)))
     #               mean_new_supporters = mean_previous_supporters
     # else
-    mean_new_supporters = dictmap(v->get_mean_among_supporters(v,model),
+    mean_new_supporters = kvdictmap((k,v)-> isempty(v) ? model[k].pos : get_mean_among_supporters(v,model),
                                   new_supporters)
     #end
     kvdictmap((k,v)-> (ω .* v .+ ((1-ω) .* mean_new_supporters[k])) |> Tuple, mean_previous_supporters )
