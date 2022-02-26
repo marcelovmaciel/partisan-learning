@@ -15,10 +15,12 @@ using Debugger
 
 include("../test/visualize_model.jl")
 
+
  # ** Try to analyze
 
 ncandidates = 2
 nissues = 2
+
 
 # (mu - mu) / 15 = 1.35
 
@@ -30,10 +32,14 @@ nissues = 2
 m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 20., switch =:runoff,
                          ω = 0.8, kappa_switch= :on,special_bounds = (true, (100., 5.)))
 
+
+
+m.properties
 #visualize_noslider(m)
 
 
 visualize_simpler(m)
+
 # FIXME: fix visualization or find bug in code
 #m.properties[:parties_ids]
 
