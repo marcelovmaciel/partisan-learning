@@ -29,12 +29,18 @@ nissues = 2
 # 50 - 20.25/2
 # 50 + 20.25/2
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=20, κ = 20., switch =:runoff,
-                         ω = 0.8, kappa_switch= :on,special_bounds = (true, (100., 5.)))
+
+
+m = pla.initialize_model(1000,nissues, ncandidates, δ=5, κ = 27. , switch
+    =:runoff, ω = 0.8, kappa_switch= :on,special_bounds = (true, (100., 5.)),
+                         voter_pos_initializor = () ->
+                             pla.sample_1dnormal((100., 5.),
+                                                 pla.one_modal_dispersed ),
+                         party_pos_hardwired = true)
 
 
 
-m.properties
+m.properties[:parties_candidateid_ppos_δ]
 #visualize_noslider(m)
 
 

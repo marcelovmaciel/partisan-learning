@@ -65,6 +65,8 @@ function sample_uniform_pos(nissues = 2)
 Tuple(rand(distri.Uniform(bounds...),nissues))
 end
 
+
+one_modal_dispersed = (Normal(50,25),Normal(50,25))
 standard_1d_poss = (Normal(43.25,10), Normal(56.75,10))
 more_dispersed_1d_poss = (Normal(50 - 20.25/2,15),
                           Normal(50 + 20.25/2,15))
@@ -81,13 +83,16 @@ function sample_1dnormal(bound, poss = standard_1d_poss)
         pos = (rand(poss[1]), bound[2]/2 )
         if pos[1] < 0.0
             pos = (0.01, bound[2]/2 )
+        elseif pos[1] > 100
+            pos = (99.999, bound[2]/2 )
         end
-
 
     else
         pos = (rand(poss[2]),bound[2]/2 )
         if pos[1] > 100
             pos = (99.999, bound[2]/2 )
+        elseif pos[1] < 0.0
+            pos = (0.01, bound[2]/2 )
             end
     end
     return(pos)
@@ -117,12 +122,14 @@ end
 function sample_parties_pos(nparties, model)
     ids = collect(abm.allids(model))
 
-    partiesposs = Dict(map(x-> (x,model[x].pos),
+        partiesposs = Dict(map(x-> (x,model[x].pos),
                            sample(ids,nparties, replace = false)))
     actualpartiesposs = dictmap(v-> Dict(:partyposition => v,
                                          :partycandidate => -1,
                                          :δ => model.properties[:δ]),
                                 partiesposs)
+
+
     return(actualpartiesposs)
 end
 
@@ -466,7 +473,9 @@ function get_median_pos(m)
 
 function initialize_model(nagents::Int, nissues::Int, nparties;
                           κ = 2., δ=1.,  switch= :random,  seed = 125, ω = 0.8, kappa_switch = :off,
-                           special_bounds = (false, bounds), voter_pos_initializor = () -> sample_1dnormal(special_bounds[2]))
+                          special_bounds = (false, bounds),
+                          voter_pos_initializor = () -> sample_1dnormal(special_bounds[2] ),
+                          party_pos_hardwired = false)
     if special_bounds[1] == true
         space = abm.ContinuousSpace(special_bounds[2], periodic = false)
     else
@@ -521,8 +530,24 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
         vi = Voter(i, nissues=nissues, κ = model.properties[:κ], pos = voter_pos_initializor)
         abm.add_agent_pos!(vi, model)
     end
+
+    if !party_pos_hardwired
     model.properties[:parties_candidateid_ppos_δ] = sample_parties_pos(nparties,
-                                                        model)
+                                                                       model)
+    else
+        model[1].pos = (15, 5/2)
+        model[2].pos = (85, 5/2)
+
+        partiesposs = Dict(map(x-> (x,model[x].pos),[1,2]))
+
+        actualpartiesposs = dictmap(v-> Dict(:partyposition => v,
+                                         :partycandidate => -1,
+                                         :δ => model.properties[:δ]),
+                                    partiesposs)
+
+        model.properties[:parties_candidateid_ppos_δ] = actualpartiesposs
+
+    end
 
     for (i,v) in enumerate(collect(keys(model.properties[:parties_candidateid_ppos_δ])))
         model.properties[:parties_ids][i]=v
