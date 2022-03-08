@@ -1,0 +1,77 @@
+% Created 2022-01-28 sex 14:51
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{Marcelo Veloso Maciel}
+\date{\today}
+\title{Model Description}
+\hypersetup{
+ pdfauthor={Marcelo Veloso Maciel},
+ pdftitle={Model Description},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 27.2 (Org mode 9.6)}, 
+ pdflang={English}}
+\usepackage{biblatex}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+
+\section{Initial Condition}
+\label{sec:orga7f82a7}
+\begin{enumerate}
+\item Sample voters positions from Uniform(0,100) x Uniform(0,100)
+\item Sample parties positions from the previously sampled positions
+\item Voters assume party id from the party that is closest to them;
+\end{enumerate}
+
+\section{Stepping}
+\label{sec:orgea60518}
+\begin{enumerate}
+\item Sample 4 candidates for each party according to a radius \(\delta\)
+\begin{itemize}
+\item With the conditional that the candidates must have the party id of the party;
+\item right now, \(\delta\) is a global parameter.
+\end{itemize}
+\item Each party chooses a candidate according to a voting procedure among its supporters
+\begin{itemize}
+\item Right now it is plurality. Runoff is already working too.
+\end{itemize}
+\item Voters vote according to the global benefit of the doubt parameter, \(\kappa\)
+\begin{itemize}
+\item if euclidean-distance(position-candidate-closest-to-me, position-my-party-candidate) > \(\kappa\) then vote for the candidate-closest-to-me else vote for my-party-candidate
+\item Right now there are two versions of  \(\kappa\):
+\begin{itemize}
+\item global parameter;
+\item baseline global \(\kappa\) * proportion of times agent voted for that party (updated at each time step)
+\end{itemize}
+\end{itemize}
+\item The candidate with most votes wins
+
+\item Voters change their id according to the f*g and f*(1-g) cases
+
+\item Parties change their position
+\begin{itemize}
+\item \(\omega\)*mean-previous-supporters + (1- \(\omega\))*mean-new-supporters
+\item \(\omega\) may be a global parameter or something that parties have as an internal variable;
+\end{itemize}
+
+\item Loop
+\begin{itemize}
+\item Collect system's measures.
+\end{itemize}
+\end{enumerate}
+\end{document}

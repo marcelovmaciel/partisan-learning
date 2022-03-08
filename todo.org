@@ -116,4 +116,8 @@ about describing the comparative statics in a non-formal way.
 * TODO [#B] Create a representation gap incumbency advantage variant
  Right now the model is not presenting any interesting dynamics. Winning doesn't
  feedback into the system, nor the dissatisfaction of voters is taken into
- account. I'm thinking of coming up with possibly simpler model with death/birth dynamics.
+ account. I'm thinking of coming up with possibly simpler model with death/birth dynamics
+
+* TODO [#A] check if candidate sampling is correct in the hardwired example
+
+* TODO [#A] Create time series for party loyalty colored by position, marker by party

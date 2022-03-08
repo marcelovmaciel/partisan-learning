@@ -2,7 +2,6 @@ import Pkg
 
 Pkg.activate("../")
 
-
 using Revise
 import PartisanLearning as pl
 const is = pl.IssueSalience
@@ -11,23 +10,16 @@ const pla = pl.PartyLabel
 using GLMakie
 using Agents
 import Distances
-using Debugger
-
+using CSV
+using DataFrames
+import ColorSchemes
 include("../test/visualize_model.jl")
 
 
- # ** Try to analyze
+# ** Try to analyze
 
 ncandidates = 2
 nissues = 2
-
-
-# (mu - mu) / 15 = 1.35
-
-# 1.35 * 15
-
-# 50 - 20.25/2
-# 50 + 20.25/2
 
 
 
@@ -178,7 +170,7 @@ m.properties[:median_pos]
 pla.dist.euclidean(m.properties[:incumbent])
 
 
-# * Test sampler
+# * Test    sampler
 
 ncandidates = 2
 nissues = 2
@@ -227,3 +219,52 @@ fig,adf,mdf = abm_data_exploration(m,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1
                                    , static_preplot! = pla.static_preplot! )
+# * Hardwired case
+
+ncandidates = 2
+nissues = 2
+
+
+
+m = pla.initialize_model(1000,nissues, ncandidates, δ=15, κ = 24. , switch
+    =:runoff, ω = 0.8, kappa_switch= :on,special_bounds = (true, (100., 5.)),
+                         voter_pos_initializor = () ->
+                             pla.sample_1dnormal((100., 5.),
+                                                 pla.one_modal_dispersed ),
+                         party_pos_hardwired = true)
+
+loyalty(i) = pla.get_keep_party_id_prob(i.id,m)
+ideal_point(i) = i.pos[1]
+
+adata = [ideal_point, loyalty, :myPartyId]
+
+for i in 1:4
+    pla.model_step!(m)
+end
+
+df,data_m= run!(m, pla.abm.dummystep, pla.model_step!, 1000; adata)
+# CSV.write("../../../data/hardwired.csv", data_a)
+#df = CSV.read("../../../data/hardwired.csv", DataFrame)
+
+f
+f = Figure()
+ax = Axis(f[1, 1], xlabel = "step", ylabel = "Party Loyalty")
+
+
+for i in 1:100
+    subsetted_df = filter(:id => x->x==i,df )
+    color  = get(ColorSchemes.thermal,
+                 (subsetted_df.ideal_point |> unique |> first)/100 )
+    scatter!(subsetted_df.step,
+             subsetted_df.loyalty, color = (color, 0.2),
+               axis = (aspect = 1, xlabel = "x axis", ylabel = "y axis"))
+
+end
+
+
+Colorbar(f[1, 2], limits = (0, 1), colormap = ColorSchemes.thermal,
+         label = "Ideal Point Value")
+f
+
+
+save("first_run_k24_rho15.png", f)
