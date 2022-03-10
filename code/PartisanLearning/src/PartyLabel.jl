@@ -358,7 +358,6 @@ function get_closest_fromList(agentid,candidate_list,model)
     return(candidateid)
 end
 
-
 function secondIt_get_parties_supporters(model)
     overall_placeholder = []
     for k in model.properties[:parties_ids]
@@ -373,6 +372,26 @@ function secondIt_get_parties_supporters(model)
         return(Dict(overall_placeholder))
 end
 
+function will_I_turnout(i,m)
+# rand(distri.Uniform(0.5,1))
+    if m.properties[:is_at_step] > 1 &&  m.properties[:is_at_step] < 4
+        lastvote = m.properties[:voterBallotTracker][i][end]
+
+        will_I = 0.9 < proportionmap(m.properties[:voterBallotTracker][i])[lastvote]
+    else
+        will_I =0.9 < proportionmap(m.properties[:voterBallotTracker][i])[m[i].myPartyId]
+    end
+
+    return(will_I)
+end
+
+
+
+function get_supporters_who_turnout(supporters,m)
+    filter(i->will_I_turnout(i,m),supporters)
+end
+
+
 
 function get_parties_supporters(model)
     Dict(
@@ -383,11 +402,13 @@ function get_parties_supporters(model)
 end
 
 
+
 function secondIt_get_primaries_votes(m,
                                       primariesCandidatesDict = simple_select_primariesCandidates(m,4))
 
-    parties_supporters = secondIt_get_parties_supporters(m)
-
+    all_parties_supporters = secondIt_get_parties_supporters(m)
+    parties_supporters = dictmap(supporters -> get_supporters_who_turnout(supporters, m),
+                                 all_parties_supporters)
     get_closest_toI(i) = get_closest_fromList(i,
                          primariesCandidatesDict[m.properties[:voterBallotTracker][i][end]],
                                               m)
@@ -396,9 +417,14 @@ function secondIt_get_primaries_votes(m,
                 parties_supporters))
 end
 
+
 function get_primaries_votes(m, primariesCandidatesDict)
-    parties_supporters = get_parties_supporters(m)
-    # FIXME: im getting an error here
+    all_parties_supporters = get_parties_supporters(m)
+    parties_supporters = dictmap(supporters -> get_supporters_who_turnout(supporters, m),
+                                 all_parties_supporters)
+    #println(dictmap(length, parties_supporters))
+    # FIXME: im getting an error here, ghe length is all agents !!!
+    # it shouldn't be
     get_closest_toI(i) = get_closest_fromList(i,
                          primariesCandidatesDict[m[i].myPartyId],
                                               m)

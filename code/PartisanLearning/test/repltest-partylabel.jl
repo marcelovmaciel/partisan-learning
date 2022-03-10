@@ -16,6 +16,9 @@ import ColorSchemes
 include("../test/visualize_model.jl")
 
 
+
+
+
 # ** Try to analyze
 
 ncandidates = 2
@@ -23,18 +26,21 @@ nissues = 2
 
 
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=5, κ = 27. , switch
-    =:runoff, ω = 0.8, kappa_switch= :on,special_bounds = (true, (100., 5.)),
+m = pla.initialize_model(1000,
+                         nissues,
+                         ncandidates,
+                         δ=30,
+                         κ = 20.,
+                         switch=:plurality,
+                         ω = 0.99,
+                         kappa_switch= :off,
+                         special_bounds = (true, (100., 5.)),
                          voter_pos_initializor = () ->
                              pla.sample_1dnormal((100., 5.),
-                                                 pla.one_modal_dispersed ),
-                         party_pos_hardwired = true)
+                                                 pla.more_dispersed_1d_poss ),
+                         party_pos_hardwired = false)
 
-
-
-m.properties[:parties_candidateid_ppos_δ]
 #visualize_noslider(m)
-
 
 visualize_simpler(m)
 
@@ -226,8 +232,8 @@ nissues = 2
 
 
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=15, κ = 24. , switch
-    =:runoff, ω = 0.8, kappa_switch= :on,special_bounds = (true, (100., 5.)),
+m = pla.initialize_model(1000,nissues, ncandidates, δ=5, κ = 26. , switch
+    =:runoff, ω = 0.8, kappa_switch= :off,special_bounds = (true, (100., 5.)),
                          voter_pos_initializor = () ->
                              pla.sample_1dnormal((100., 5.),
                                                  pla.one_modal_dispersed ),

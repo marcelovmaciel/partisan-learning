@@ -113,11 +113,24 @@ about describing the comparative statics in a non-formal way.
 
 * OKAY implement the new initial party id
 * DONE implement visualization of party polarization
-* TODO [#B] Create a representation gap incumbency advantage variant
+* TODO [#C] Create a representation gap incumbency advantage variant
  Right now the model is not presenting any interesting dynamics. Winning doesn't
  feedback into the system, nor the dissatisfaction of voters is taken into
  account. I'm thinking of coming up with possibly simpler model with death/birth dynamics
 
-* TODO [#A] check if candidate sampling is correct in the hardwired example
+* DONE [#A] check if candidate sampling is correct in the hardwired example
 
-* TODO [#A] Create time series for party loyalty colored by position, marker by party
+* DONE [#A] Create time series for party loyalty colored by position, marker by party
+
+* TODO [#A] implement turnout function
+(6) make sure that the voting rule overweights those with stronger party ID; maybe you use a turnout function such that the stronger the party ID the more likely the voter is to vote in the primary. If it overweights those with stronger  party ID and those with stronger party are disproportionately extremists then, over time,  that should push the party nominations toward the extremes.
+
+How I'll implement that:
+- The subset of agents this function must work is party_supporters
+- the proportion of times I've voted for this party will be the strength of my party identification;
+  #+begin_src julia
+  if rand() < strength_party_id
+  return(my_id)
+  end
+  #+end_src
+- Then I get for each party the supporters who will actually vote in this primary.

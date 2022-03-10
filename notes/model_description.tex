@@ -20,7 +20,7 @@
  pdftitle={Model Description},
  pdfkeywords={},
  pdfsubject={},
- pdfcreator={Emacs 27.2 (Org mode 9.6)}, 
+ pdfcreator={Emacs 27.2 (Org mode 9.6)},
  pdflang={English}}
 \usepackage{biblatex}
 
@@ -29,24 +29,50 @@
 \maketitle
 \tableofcontents
 
+\section{Glossary}
+\begin{itemize}
+  \item \(\rho\): radius parties use to sample their candidates;
+  \item \(\kappa\): benefit of the doubt parameter.
+  \item \(\omega\): weight given to the previous supporters vs new supporters.
+\end{itemize}
+
 
 \section{Initial Condition}
 \label{sec:orga7f82a7}
 \begin{enumerate}
-\item Sample voters positions from Uniform(0,100) x Uniform(0,100)
-\item Sample parties positions from the previously sampled positions
-\item Voters assume party id from the party that is closest to them;
+  \item Sample half of voters positions from Normal(43.25,10) and another half
+        from Normal(56.75, 10). I'm using Cohen's D to calculate these overlapping Normals (\url{https://rpsychologist.com/cohend/});
+\item Sample parties positions from the previously sampled positions.
 \end{enumerate}
 
 \section{Stepping}
-\label{sec:orgea60518}
-\begin{enumerate}
+There are three kinds of steps.
+
+\begin{itemize}
+  \item In the first step:
+  \begin{enumerate}
+    \item  Each party picks a random candidate within a radius \(\rho\) from their current position.
+    \item Every voter votes to the candidate that is closest to them;
+    \item Every voter adds the party they voted for  to their vote\_ballot\_tracker
+  \end{enumerate}
+  \item In the second and third steps:
+  \begin{enumerate}
+    \item Each party picks 4 random candidates within a radius \(\rho\) from their current position;
+    \item Voters that gave support in the previous election to this party vote in the primaries (plurality) to choose the party candidate.
+    \item Every voter votes to the candidate that is closest to them and add the party they voted  to their vote\_ballot\_tracker
+  \end{enumerate}
+  \item From step 4 onwards:
+
+  \begin{enumerate}
+    \item (ONLY ON STEP 4): voter randomly assumes a party id based on their vote\_ballot\_tracker: if the agent voted for the party for 3/4 of the steps, it has a probability of 3/4 of being chosen as the agent party id.
+
 \item Sample 4 candidates for each party according to a radius \(\delta\)
 \begin{itemize}
 \item With the conditional that the candidates must have the party id of the party;
 \item right now, \(\delta\) is a global parameter.
 \end{itemize}
 \item Each party chooses a candidate according to a voting procedure among its supporters
+
 \begin{itemize}
 \item Right now it is plurality. Runoff is already working too.
 \end{itemize}
@@ -59,19 +85,32 @@
 \item baseline global \(\kappa\) * proportion of times agent voted for that party (updated at each time step)
 \end{itemize}
 \end{itemize}
-\item The candidate with most votes wins
+    \item The candidate with most votes wins
 
-\item Voters change their id according to the f*g and f*(1-g) cases
+    \item Voters change their id according to their party loyalty, which is the
+          probability of keeping their party id.
+
+\begin{itemize}
+  \item If the agent voted against its party id, then keep\_party\_id\_prob =
+        proportion\_IvotedForThisParty * (1-proportion\_peers\_like\_me);
+  \item Else: keep\_party\_id\_prob = proportion\_IvotedForThisParty * proportion\_peers\_like\_me;
+  \item As usual  vote\_ballot\_tracker is updated.
+\end{itemize}
 
 \item Parties change their position
 \begin{itemize}
-\item \(\omega\)*mean-previous-supporters + (1- \(\omega\))*mean-new-supporters
-\item \(\omega\) may be a global parameter or something that parties have as an internal variable;
+  \item \(\omega\)*mean-previous-supporters + (1- \(\omega\))*mean-new-supporters
+  \item \(\omega\) may be a global parameter or something that parties have as an
+        internal variable;
 \end{itemize}
 
-\item Loop
-\begin{itemize}
-\item Collect system's measures.
-\end{itemize}
 \end{enumerate}
+\end{itemize}
+
+\section{Data Collection}
+
+Collect system's measures: Distance between parties and party loyalty.
+
+
+
 \end{document}
