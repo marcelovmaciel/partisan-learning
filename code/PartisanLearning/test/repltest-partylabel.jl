@@ -232,7 +232,7 @@ nissues = 2
 
 
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=5, κ = 26. , switch
+m = pla.initialize_model(1000,nissues, ncandidates, δ=5, κ = 28. , switch
     =:runoff, ω = 0.8, kappa_switch= :off,special_bounds = (true, (100., 5.)),
                          voter_pos_initializor = () ->
                              pla.sample_1dnormal((100., 5.),
@@ -274,3 +274,59 @@ f
 
 
 save("first_run_k24_rho15.png", f)
+
+
+
+
+
+# Visualize things he asks for
+
+ncandidates = 2
+nissues = 2
+
+
+
+m = pla.initialize_model(1000,
+                         nissues,
+                         ncandidates,
+                         δ=30,
+                         κ = 20.,
+                         switch=:plurality,
+                         ω = 0.99,
+                         kappa_switch= :off,
+                         special_bounds = (true, (100., 5.)),
+                         voter_pos_initializor = () ->
+                             pla.sample_1dnormal((100., 5.),
+                                                 pla.more_dispersed_1d_poss ),
+                         party_pos_hardwired = false)
+
+
+
+
+loyalty(i) = pla.get_keep_party_id_prob(i.id,m)
+ideal_point(i) = i.pos[1]
+
+adata = [ideal_point, loyalty, :myPartyId]
+
+for i in 1:4
+    pla.model_step!(m)
+end
+
+df,data_m= run!(m, pla.abm.dummystep, pla.model_step!, 1000; adata)
+# CSV.write("../../../data/hardwired.csv", data_a)
+#df = CSV.read("../../../data/hardwired.csv", DataFrame)
+
+
+f = Figure()
+ax = Axis(f[1, 1], xlabel = "step", ylabel = "Party Loyalty")
+
+
+for i in 1:100
+    subsetted_df = filter(:id => x->x==i,df )
+    color  = get(ColorSchemes.thermal,
+                 (subsetted_df.ideal_point |> unique |> first)/100 )
+    scatter!(subsetted_df.step,
+             subsetted_df.loyalty, color = (color, 0.2),
+               axis = (aspect = 1, xlabel = "x axis", ylabel = "y axis"))
+
+end
