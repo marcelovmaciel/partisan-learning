@@ -860,8 +860,8 @@ function model_step!(model)
                                        old_supporters )
         set_new_parties_poss!(model,newposs)
     end
-    # TODO: put all the logic into the conditional!
-    # I can't use kappa logic if agents don't have parties!!!!
+
+
 
 end
 

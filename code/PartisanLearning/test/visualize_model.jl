@@ -78,7 +78,7 @@ function visualize_simpler(m)
     pla.model_step!(m)
      pla.model_step!(m)
      pla.model_step!(m)
-     pla.model_step!(m)
+    pla.model_step!(m)
 
 
     params = Dict(:κ => 0.0:1:100.0, :switch => [:random, :plurality, :runoff],
@@ -127,8 +127,8 @@ function visualize_simpler(m)
   #          pla.get_incumbent_eccentricity,
   #          pla.get_mean_contestant_eccentricity]
 #pla.normalized_ENP,
-    alabels = ["keep party prob"]
-    mlabels = ["Party1Pos", "Party2Pos", "dist(c1,c2)"]
+    alabels = ["prop voting against party"]
+    # mlabels = ["Party1Pos", "Party2Pos", "dist(c1,c2)"]
   # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 #"NENP",
   fig,adf,mdf = abm_data_exploration(m,
@@ -138,7 +138,7 @@ function visualize_simpler(m)
                                      adata,
         #                             mdata,
                                      alabels,
-                                     mlabels,
+      #                               mlabels,
                                      ac = agent_colors,
                                      as = agent_size,
                                      am = agent_marker,  spu = 1:100 )

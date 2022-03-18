@@ -95,7 +95,7 @@ the main factor... Or maybe not.
 - [[cite:&lavin2021simulation]]
 - [[cite:&borgonovo2022sensitivity]]
 
-* TODO [#A] write down the model description
+* DONE [#A] write down the model description
 #+begin_quote
 OK, let's skip for a while writing out a system of equations All I really need
 is a clear statement in English with just enough math symbolism for me to be
@@ -137,10 +137,14 @@ How I'll implement that:
 
 
 
-* TODO test initial vote
+* TODO [#C] test initial vote
 
  The higher
 the overlap between party distributions the more cross-party voting there should
 be. If that's not true then there's something wrong. Try running the model with
 different initial overlaps to see if the model does what it is supposed to do in
 the initial round before we have party loyalties kicking in.
+
+* TODO [#A] implement more concentrated distribution
+
+* TODO [#B] Run small pipeline comparing the three distributions

@@ -16,9 +16,6 @@ import ColorSchemes
 include("../test/visualize_model.jl")
 
 
-
-
-
 # ** Try to analyze
 
 ncandidates = 2
@@ -29,6 +26,9 @@ nissues = 2
 # me errors of empty collection in dictmap
 # error in setting the candidates maybe
 # gotta debug this tomorrow. I'm so tired of this shit
+
+
+
 
 m = pla.initialize_model(1000,
                          nissues,
@@ -47,9 +47,6 @@ m = pla.initialize_model(1000,
 #visualize_noslider(m)
 
 visualize_simpler(m)
-
-# FIXME: fix visualization or find bug in code
-#m.properties[:parties_ids]
 
 pla.model_step!(m)
 
@@ -155,80 +152,8 @@ fig,adf,mdf = abm_data_exploration(m,
                                    as = agent_size, spu = 1)
 
 
-# ** Eccentricity test
-
-ncandidates = 15
-nissues = 2
-
-m = pla.initialize_model(500,nissues,
-                         ncandidates, δ = 3.)
-pla.get_median_pos(m)
-
-dims = m.properties[:nissues]
-medians = Vector{Float64}()
-
-for dim in 1:dims
-    dimmedian = Statistics.median([m[x].pos[dim] for x in  pla.abm.allids(m)])
-        push!(medians, dimmedian)
-end
 
 
-# TODO: check Incumbent again
-
-
-m.properties[:median_pos]
-pla.dist.euclidean(m.properties[:incumbent])
-
-
-# * Test    sampler
-
-ncandidates = 2
-nissues = 2
-
-m = pla.initialize_model(500,nissues,
-                         ncandidates, δ = 3.)
-params = Dict(:κ => 0.0:1.:20.,
-              :δ => 1:1:20)
-
-# TODO: run with 0.5,0.5 below : wtf is that a periodic boundary condition on?
-# FIXME: yes, periodic conditions are on! LOL
-neighs = pla.abm.nearby_ids((10,10),
-                       m,
-                       1,
-                       exact = true) |> collect
-
-[pla.dist.euclidean((5,5), m[x].pos) for x in neighs] |> maximum
-
-agent_colors(a) = a.id in neighs  ? :yellow : "#2b2b33"
-agent_size(a) = a.id in neighs  ? 20 :  5
-
-
-#higher kappa means agents will tend to vote more for
-#their partyid. Conversely, lower kappa means people vote more
-# for candidates closer to then rather than closer to their party
-# higher δ means parties sample further from their location.
-# both depended upon the underlying boundaries! think about that !!!
-
-adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-         (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
-
-mdata = [pla.normalized_ENP,
-         x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
-         x-> x.properties[:party_switches][end]/x.properties[:nagents],
-         pla.get_incumbent_eccentricity]
-
-alabels = ["¬-PartyId", "Rep"]
-mlabels = ["NENP", "IStreaks", "PSwitches", "ecc"]
-
-fig,adf,mdf = abm_data_exploration(m,
-                                   pla.abm.dummystep,
-                                   pla.model_step!,
-                                   params;
-                                   adata, mdata,
-                                   alabels,mlabels,
-                                   ac = agent_colors,
-                                   as = agent_size, spu = 1
-                                   , static_preplot! = pla.static_preplot! )
 # * Hardwired case
 
 ncandidates = 2
