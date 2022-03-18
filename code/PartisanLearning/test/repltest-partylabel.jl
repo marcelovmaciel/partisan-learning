@@ -25,19 +25,23 @@ ncandidates = 2
 nissues = 2
 
 
+# FIXME get_plurality_result is giving
+# me errors of empty collection in dictmap
+# error in setting the candidates maybe
+# gotta debug this tomorrow. I'm so tired of this shit
 
 m = pla.initialize_model(1000,
                          nissues,
                          ncandidates,
-                         δ=30,
-                         κ = 20.,
+                         δ=15,
+                         κ = 0.,
                          switch=:plurality,
                          ω = 0.99,
                          kappa_switch= :off,
                          special_bounds = (true, (100., 5.)),
                          voter_pos_initializor = () ->
                              pla.sample_1dnormal((100., 5.),
-                                                 pla.more_dispersed_1d_poss ),
+                                                 pla.standard_1d_poss ),
                          party_pos_hardwired = false)
 
 #visualize_noslider(m)
@@ -279,7 +283,7 @@ save("first_run_k24_rho15.png", f)
 
 
 
-# Visualize things he asks for
+# * Visualize things he asks for
 
 ncandidates = 2
 nissues = 2
@@ -290,18 +294,15 @@ m = pla.initialize_model(1000,
                          nissues,
                          ncandidates,
                          δ=30,
-                         κ = 20.,
+                         κ = 27.,
                          switch=:plurality,
-                         ω = 0.99,
+                         ω = 0.8,
                          kappa_switch= :off,
                          special_bounds = (true, (100., 5.)),
                          voter_pos_initializor = () ->
                              pla.sample_1dnormal((100., 5.),
-                                                 pla.more_dispersed_1d_poss ),
+                                                 pla.more_dispersed_1d_poss),
                          party_pos_hardwired = false)
-
-
-
 
 loyalty(i) = pla.get_keep_party_id_prob(i.id,m)
 ideal_point(i) = i.pos[1]
@@ -312,7 +313,7 @@ for i in 1:4
     pla.model_step!(m)
 end
 
-df,data_m= run!(m, pla.abm.dummystep, pla.model_step!, 1000; adata)
+df,data_m= run!(m, pla.abm.dummystep, pla.model_step!, 20; adata)
 # CSV.write("../../../data/hardwired.csv", data_a)
 #df = CSV.read("../../../data/hardwired.csv", DataFrame)
 
@@ -326,7 +327,76 @@ for i in 1:100
     color  = get(ColorSchemes.thermal,
                  (subsetted_df.ideal_point |> unique |> first)/100 )
     scatter!(subsetted_df.step,
-             subsetted_df.loyalty, color = (color, 0.2),
+             log.(subsetted_df.loyalty ), color = (color, 0.4),
                axis = (aspect = 1, xlabel = "x axis", ylabel = "y axis"))
 
 end
+
+
+
+Colorbar(f[1, 2], limits = (0, 1), colormap = ColorSchemes.thermal,
+         label = "Ideal Point Value")
+f
+
+
+save("log_hardwired_turnout_kappa27.png", f)
+
+
+# * Testing initial distribution +
+
+ncandidates = 2
+nissues = 2
+
+
+m = pla.initialize_model(1000,
+                         nissues,
+                         ncandidates,
+                         δ=30,
+                         κ = 0.,
+                         switch=:plurality,
+                         ω = 0.8,
+                         kappa_switch= :off,
+                         special_bounds = (true, (100., 5.)),
+                         voter_pos_initializor = () ->
+                             pla.sample_1dnormal((100., 5.),
+                                                 pla.standard_1d_poss),
+                         party_pos_hardwired = false)
+
+
+# #(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]
+#
+
+for i in 1:4
+    pla.model_step!(m)
+end
+
+loyalty(i) = pla.get_keep_party_id_prob(i.id,m)
+ideal_point(i) = i.pos[1]
+
+function get_prop_voted_against(m)
+    [pla.HaveIVotedAgainstMyParty(a,m)
+     for a in allids(m)] |>
+         (x-> count(x)/m.properties[:nagents])
+end
+
+
+adata = [ideal_point,
+         loyalty]
+
+
+mdata = [get_prop_voted_against]
+
+df,data_m= run!(m,
+                pla.abm.dummystep,
+                pla.model_step!, 200;
+                adata,
+                mdata)
+
+f2 = Figure()
+ax = Axis(f2[1, 1],
+          xlabel = "step",
+          ylabel = "Prop Cross Party Vote")
+
+scatter!(data_m.step,
+         data_m.get_prop_voted_against)
+f2

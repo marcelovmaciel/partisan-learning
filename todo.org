@@ -122,7 +122,7 @@ about describing the comparative statics in a non-formal way.
 
 * DONE [#A] Create time series for party loyalty colored by position, marker by party
 
-* TODO [#A] implement turnout function
+* DONE [#A] implement turnout function
 (6) make sure that the voting rule overweights those with stronger party ID; maybe you use a turnout function such that the stronger the party ID the more likely the voter is to vote in the primary. If it overweights those with stronger  party ID and those with stronger party are disproportionately extremists then, over time,  that should push the party nominations toward the extremes.
 
 How I'll implement that:
@@ -134,3 +134,13 @@ How I'll implement that:
   end
   #+end_src
 - Then I get for each party the supporters who will actually vote in this primary.
+
+
+
+* TODO test initial vote
+
+ The higher
+the overlap between party distributions the more cross-party voting there should
+be. If that's not true then there's something wrong. Try running the model with
+different initial overlaps to see if the model does what it is supposed to do in
+the initial round before we have party loyalties kicking in.

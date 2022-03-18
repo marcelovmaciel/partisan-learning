@@ -72,6 +72,7 @@ end
 
 haveiswitched(agent::pla.Voter, m) = haveiswitched(agent.id,m)
 
+
 function visualize_simpler(m)
     # FIXME: getting a problem now that initial condition is only initial lol
     pla.model_step!(m)
@@ -108,14 +109,14 @@ function visualize_simpler(m)
   # higher δ means parties sample further from their location.
   # both depended upon the underlying boundaries! think about that !!!
 
-  # adata = [#(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+   adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents])]
   #          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
 
 
-    adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
-    mdata = [m-> m[m.properties[:parties_ids][1] ].pos[1],
-             m -> m[m.properties[:parties_ids][2] ].pos[1],
-             pla.get_2candidates_distance]
+  #  adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
+    # mdata = [m-> m[m.properties[:parties_ids][1] ].pos[1],
+      #       m -> m[m.properties[:parties_ids][2] ].pos[1],
+       #      pla.get_2candidates_distance]
         #[ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
             #pla.get_incumbent_eccentricity,
             #pla.get_mean_contestant_eccentricity]
@@ -135,7 +136,7 @@ function visualize_simpler(m)
                                      pla.model_step!,
                                      params;
                                      adata,
-                                     mdata,
+        #                             mdata,
                                      alabels,
                                      mlabels,
                                      ac = agent_colors,
