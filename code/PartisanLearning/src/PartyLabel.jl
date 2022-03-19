@@ -65,20 +65,27 @@ function sample_uniform_pos(nissues = 2)
 Tuple(rand(distri.Uniform(bounds...),nissues))
 end
 
+OVL(test_cohend) = 2*distri.cdf(distri.Normal(),
+                                -abs(test_cohend)/2)
+one_modal_dispersed = (distri.Normal(50,25),distri.Normal(50,25))
 
-one_modal_dispersed = (Normal(50,25),Normal(50,25))
-standard_1d_poss = (Normal(43.25,10), Normal(56.75,10))
-more_dispersed_1d_poss = (Normal(50 - 20.25/2,15),
-                          Normal(50 + 20.25/2,15))
+standard_1d_poss = (distri.Normal(43.25,10), distri.Normal(56.75,10))
+overlap_80_poss = (distri.Normal(47.5,10),distri.Normal(52.5,10) )
+overlap_20_poss = (distri.Normal(37.25, 10), distri.Normal(62.75,10))
+
+more_dispersed_1d_poss = (distri.Normal(50 - 20.25/2,15),
+                          distri.Normal(50 + 20.25/2,15))
 
 function sample_1dnormal(bound, poss = standard_1d_poss)
 
-    #=
-    - I'll simply put a constant in one dimension and work on the other lol.ap
-- I'll use cohen d to define overlapping distributions:
-  - As shown here [[https://rpsychologist.com/cohend/][Interpreting Cohen&#x27;s d | R Psychologist]] a cohen d of 1.35 gives an overlap of 50%.
-- Thus if I have a distribution of (43,10) I gotta have the other as (56.5,10)
-=#
+    #= - I'll simply put a constant in one dimension and work on the other
+    lol.ap - I'll use cohen d to define overlapping distributions: - As shown
+    here [[https://rpsychologist.com/cohend/][Interpreting Cohen&#x27;s d | R
+    Psychologist]] a cohen d of 1.35 gives an overlap of 50%. - Thus if I have a
+    distribution of (43,10) I gotta have the other as (56.5,10)
+    δ= μ2​−μ1/σ​​ is the formula for a cohend.
+    =#
+
     if rand([false,true])
         pos = (rand(poss[1]), bound[2]/2 )
         if pos[1] < 0.0
@@ -372,14 +379,25 @@ function secondIt_get_parties_supporters(model)
         return(Dict(overall_placeholder))
 end
 
+
+# BUG: there is an indexing problem here.
 function will_I_turnout(i,m)
 # rand(distri.Uniform(0.5,1))
     if m.properties[:is_at_step] > 1 &&  m.properties[:is_at_step] < 4
         lastvote = m.properties[:voterBallotTracker][i][end]
 
-        will_I = 0.9 < proportionmap(m.properties[:voterBallotTracker][i])[lastvote]
+        will_I = rand(distri.Uniform(0.5,1)) < proportionmap(m.properties[:voterBallotTracker][i])[lastvote]
     else
-        will_I =0.9 < proportionmap(m.properties[:voterBallotTracker][i])[m[i].myPartyId]
+        println("got before the voter")
+        voter = m[i]
+         println("got the voter")
+        voterballot = m.properties[:voterBallotTracker][i]
+        println("got his ballot")
+        proportion_votesi = proportionmap(voterballot)
+        # println("got his votes proportions")
+        proportionvoted_for_party = proportion_votesi[voter.myPartyId]
+        println("got his party proportion: ", proportionvoted_for_party)
+        will_I = rand(distri.Uniform(0.5,1)) < proportionvoted_for_party
     end
 
     return(will_I)
