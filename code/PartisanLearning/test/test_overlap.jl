@@ -17,8 +17,6 @@ using StatsBase
 include("../test/visualize_model.jl")
 
 
-
-
 function get_data_initial_dist(whichdist, nsteps= 20)
     ncandidates = 2
     nissues = 2
@@ -27,7 +25,7 @@ function get_data_initial_dist(whichdist, nsteps= 20)
                              ncandidates,
                              δ=30,
                              κ = 0.,
-                             switch=:plurality,
+                             switch=:runoff,
                              ω = 0.8,
                              kappa_switch= :off,
                              special_bounds = (true, (100., 5.)),
@@ -90,14 +88,14 @@ function summaries_prop_voted_against(df)
 end
 
 
-function saveplots_collect_stats(whichdist,scattername )
+function saveplots_collect_stats(whichdist,scattername)
 
-    holderdf = DataFrame([[], [], []], [:min, :max, :mean])
+    holderdf = DataFrame([Float64[], Float64[], Float64[]], [:min, :max, :mean])
     for i in 1:30
         df = get_data_initial_dist(whichdist)
         holderdf = vcat(holderdf,
                         summaries_prop_voted_against(df))
-        plot_scatter(holderdf, scattername, i)
+        plot_scatter(df, scattername, i)
     end
 
     return(holderdf)
@@ -106,7 +104,30 @@ end
 
 overlap50df = saveplots_collect_stats(pla.standard_1d_poss, "overlap50")
 
-
-
 overlap20df = saveplots_collect_stats(pla.overlap_20_poss, "overlap20")
 overlap80df = saveplots_collect_stats(pla.overlap_80_poss, "overlap80")
+
+
+# THIS IS WRONG
+# f2 = Figure()
+# ax = Axis(f2[1, 1],
+#           xlabel = "step",
+#           ylabel = "Prop Cross Party Vote")
+
+# foostep = Float64.(collect(1:30))
+
+
+# sc1 = scatter!(foostep,
+#          overlap80df.mean, color = :black)
+
+
+# sc2= scatter!(foostep,
+#          overlap80df.min, color = :blue)
+
+
+# sc3 = scatter!(foostep,
+#          overlap80df.max, color = :red)
+
+# Legend(f2[1, 2],
+#     [sc1, sc2, sc3],
+#     ["mean", "min", "max"])

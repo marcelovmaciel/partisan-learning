@@ -179,7 +179,7 @@ function select_primariesCandidates(model::abm.ABM)
       return(party_candidate_pairs)
 end
 
-
+# FIXME: there is something wrong with this function!
 function get_plurality_result(primariesresult::Dict)
     dictmap(argmax ∘ proportionmap, primariesresult)
 end
@@ -199,6 +199,7 @@ function get_plurality_result(m::abm.ABM, seconditer_switch=false)
     return(result)
 end
 
+# FIXME: this is also wrong. I'm so tired of this code...
 function get_runoff_result(;primariesresult=primariesresult,m=m, seconditer_switch = false)
 
     #println(m)
@@ -349,7 +350,6 @@ function get_closest_candidate(agentid::Int,model)
     return(candidateid,itspartyid)
 end
 
-
 function get_closest_fromList(agentid,candidate_list,model)
     dummydistance = 100000.
     candidateid = -1
@@ -388,15 +388,21 @@ function will_I_turnout(i,m)
 
         will_I = rand(distri.Uniform(0.5,1)) < proportionmap(m.properties[:voterBallotTracker][i])[lastvote]
     else
-        println("got before the voter")
+#        println("got before the voter")
         voter = m[i]
-         println("got the voter")
+ #        println("got the voter")
         voterballot = m.properties[:voterBallotTracker][i]
-        println("got his ballot")
+  #      println("got his ballot")
         proportion_votesi = proportionmap(voterballot)
+        #println(collect(keys(proportion_votesi)), " ", voter.myPartyId)
         # println("got his votes proportions")
-        proportionvoted_for_party = proportion_votesi[voter.myPartyId]
-        println("got his party proportion: ", proportionvoted_for_party)
+        if !(voter.myPartyId in
+         keys(proportion_votesi))
+        proportionvoted_for_party = 0.0
+        else
+            proportionvoted_for_party = proportion_votesi[voter.myPartyId]
+        end
+        #println("got his party proportion: ", proportionvoted_for_party)
         will_I = rand(distri.Uniform(0.5,1)) < proportionvoted_for_party
     end
 
