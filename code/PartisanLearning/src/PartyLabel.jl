@@ -180,8 +180,15 @@ function select_primariesCandidates(model::abm.ABM)
 end
 
 # FIXME: there is something wrong with this function!
+# NOPE it is in the primaries function!
 function get_plurality_result(primariesresult::Dict)
-    dictmap(argmax ∘ proportionmap, primariesresult)
+
+    pm =  dictmap(proportionmap, primariesresult)
+    if any(x-> length(x) == 0, values(pm))
+        println(primariesresult)
+    end
+    d = dictmap(argmax, pm)
+    return(d)
 end
 
 
@@ -194,6 +201,7 @@ function get_plurality_result(m::abm.ABM, seconditer_switch=false)
 
         candidates = select_primariesCandidates(m)
         primariesresult = get_primaries_votes(m,candidates)
+
         result = get_plurality_result(primariesresult)
     end
     return(result)
@@ -443,10 +451,22 @@ end
 
 
 function get_primaries_votes(m, primariesCandidatesDict)
+
     all_parties_supporters = get_parties_supporters(m)
+
+
+
     parties_supporters = dictmap(supporters -> get_supporters_who_turnout(supporters, m),
                                  all_parties_supporters)
-    #println(dictmap(length, parties_supporters))
+
+    # for (k,v) in parties_supporters
+    #     if length(v) == 0
+    #         parties_supporters[k] = [k]
+    #     end
+    # end
+    # BUG: WHAT THE ACTUAL FUCK IS THAT
+    # WHY DEFUCK ARE PARTIES CHANGING ID!!!!! OH FUCK
+   println(dictmap(length, parties_supporters), m.properties[:parties_ids])
     # FIXME: im getting an error here, ghe length is all agents !!!
     # it shouldn't be
     get_closest_toI(i) = get_closest_fromList(i,
