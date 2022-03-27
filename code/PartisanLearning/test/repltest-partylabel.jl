@@ -45,11 +45,18 @@ m = pla.initialize_model(1000,
                                                  pla.standard_1d_poss ),
                          party_pos_hardwired = false)
 
+
+m.properties[:party_switches]
+
+
 #visualize_noslider(m)
 
 visualize_simpler(m)
 
-pla.model_step!(m)
+for _ in 1:100
+    pla.model_step!(m)
+end
+
 
 pla.dist.euclidean((0,2), (100,2))
 

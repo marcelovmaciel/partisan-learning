@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 Agents = "46ada45e-f475-11e8-01d0-f70cc89e6671"
+AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"

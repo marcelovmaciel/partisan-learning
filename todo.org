@@ -137,9 +137,11 @@ How I'll implement that:
   #+end_src
 - Then I get for each party the supporters who will actually vote in this primary.
 
+* TODO [#A] Pick candidates from turnout voters
 
+* PROJ [#A] Redesign this
 
-* TODO [#C] test initial vote
+* DONE [#C] test initial vote
 
  The higher
 the overlap between party distributions the more cross-party voting there should
@@ -147,6 +149,6 @@ be. If that's not true then there's something wrong. Try running the model with
 different initial overlaps to see if the model does what it is supposed to do in
 the initial round before we have party loyalties kicking in.
 
-* TODO [#A] implement more concentrated distribution
+* DONE [#A] implement more concentrated distribution
 
-* TODO [#B] Run small pipeline comparing the three distributions
+* DONE [#B] Run small pipeline comparing the three distributions
