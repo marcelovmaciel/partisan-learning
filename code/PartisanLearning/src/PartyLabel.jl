@@ -69,14 +69,14 @@ OVL(test_cohend) = 2*distri.cdf(distri.Normal(),
                                 -abs(test_cohend)/2)
 one_modal_dispersed = (distri.Normal(50,25),distri.Normal(50,25))
 
-standard_1d_poss = (distri.Normal(43.25,10), distri.Normal(56.75,10))
+overlap_50_poss = (distri.Normal(43.25,10), distri.Normal(56.75,10))
 overlap_80_poss = (distri.Normal(47.5,10),distri.Normal(52.5,10) )
 overlap_20_poss = (distri.Normal(37.25, 10), distri.Normal(62.75,10))
 
 more_dispersed_1d_poss = (distri.Normal(50 - 20.25/2,15),
                           distri.Normal(50 + 20.25/2,15))
 
-function sample_1dnormal(bound, poss = standard_1d_poss)
+function sample_1dnormal(bound, poss = overlap_50_poss)
 
     #= - I'll simply put a constant in one dimension and work on the other
     lol.ap - I'll use cohen d to define overlapping distributions: - As shown
@@ -158,7 +158,7 @@ function simple_select_primariesCandidates(model::abm.ABM, n =1)
 end
 
 
-function sample_candidates(party,m,n=4)
+function sample_candidates2(party,m,n=4)
     δ = m.properties[:δ]
 
     nearby_agents = collect(abm.nearby_ids(m[party], m, δ, exact = true))
@@ -184,6 +184,46 @@ function sample_candidates(party,m,n=4)
     end
 
 end
+
+
+
+function get_random_candidates(m)
+    parties_supporters = get_parties_supporters(m)
+        if m.properties[:incumbent_party] == 0
+            dictmap(rand,parties_supporters)
+    else
+        delete!(parties_supporters, m[m.properties[:incumbent_party]].myPartyId)
+        dictmap(rand,
+                parties_supporters)
+    end
+end
+
+
+function sample_candidates(party, m)
+    if m.properties[:is_at_step] >=4
+
+        party_supporters = get_parties_supporters(m)[party]
+
+        turnout_supporters = get_supporters_who_turnout(party_supporters,
+                                                    m)
+        (isempty(turnout_supporters) ?
+            fill(party, (4,1)) :
+            sample(turnout_supporters,4))
+
+    else
+
+        nearby_agents = collect(abm.nearby_ids(m[party],
+                                               m, m.properties[:δ],
+                                               exact = true))
+        (isempty(nearby_agents) ?
+            fill(party, (4,1)) :
+            sample(nearby_agents,4))
+    end
+
+end
+
+
+
 
 
 function select_primariesCandidates(model::abm.ABM)
@@ -289,8 +329,6 @@ function get_runoff_result(;primariesresult=primariesresult,m=m, seconditer_swit
     end
 end
 
-
-
 function get_runoff_result(m, seconditer_switch = false)
     if seconditer_switch
 
@@ -312,17 +350,7 @@ function get_runoff_result(m, seconditer_switch = false)
 end
 
 
-# FIXME: Should create a radius  + m.properties[:parties_ids] version
-function get_random_candidates(m)
-    parties_supporters = get_parties_supporters(m)
-        if m.properties[:incumbent_party] == 0
-            dictmap(rand,parties_supporters)
-    else
-        delete!(parties_supporters, m[m.properties[:incumbent_party]].myPartyId)
-        dictmap(rand,
-                parties_supporters)
-    end
-end
+
 
 
 function set_candidates!(model, switch)
@@ -427,8 +455,7 @@ function will_I_turnout(i,m)
 # rand(distri.Uniform(0.5,1))
     if m.properties[:is_at_step] > 1 &&  m.properties[:is_at_step] < 4
         lastvote = m.properties[:voterBallotTracker][i][end]
-
-        will_I = rand(distri.Uniform(0.5,1)) < proportionmap(m.properties[:voterBallotTracker][i])[lastvote]
+        will_I = rand(distri.Uniform(0.75,1)) < proportionmap(m.properties[:voterBallotTracker][i])[lastvote]
     else
 #        println("got before the voter")
         voter = m[i]
@@ -445,7 +472,7 @@ function will_I_turnout(i,m)
             proportionvoted_for_party = proportion_votesi[voter.myPartyId]
         end
         #println("got his party proportion: ", proportionvoted_for_party)
-        will_I = rand(distri.Uniform(0.5,1)) < proportionvoted_for_party
+        will_I = rand(distri.Uniform(0.75,1)) < proportionvoted_for_party
     end
 
     return(will_I)

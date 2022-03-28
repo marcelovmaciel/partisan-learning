@@ -119,6 +119,10 @@ function collect_prop_voted_against(whichdist)
 end
 
 
+
+
+
+
 overlap20df = collect_prop_voted_against(pla.overlap_20_poss)
 
 overlap50df = collect_prop_voted_against(pla.standard_1d_poss)
