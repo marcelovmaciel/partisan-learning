@@ -956,6 +956,11 @@ git-tree-sha1 = "b086b7ea07f8e38cf122f5016af580881ac914fe"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "0.3.7"
 
+[[deps.NamedTupleTools]]
+git-tree-sha1 = "befc30261949849408ac945a1ebb9fa5ec5e1fd5"
+uuid = "d9ec5142-1e00-5aa0-9d6a-321866360f50"
+version = "0.14.0"
+
 [[deps.NearestNeighbors]]
 deps = ["Distances", "StaticArrays"]
 git-tree-sha1 = "16baacfdc8758bc374882566c9187e785e85c2f0"

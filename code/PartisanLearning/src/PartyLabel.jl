@@ -37,6 +37,7 @@ using Random
 import CSV
 using ProgressMeter
 using Distributions
+using NamedTupleTools
 
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
@@ -50,15 +51,6 @@ end
 agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
 throughout simulation inspection =#
 const bounds = (0,100)
-
-@kwdef struct ModelParams
-    nagents = 3000
-    ncandidates = 2
-    nissues = 2
-    bounds = bounds
-    κ = 1. # this influences whether I'll vote against my party or not
-    δ = 3. # this influences the radius of candidates a party samples from
-end
 
 
 function sample_uniform_pos(nissues = 2)
@@ -598,11 +590,37 @@ function get_median_pos(m)
  end
 
 
-function initialize_model(nagents::Int, nissues::Int, nparties;
-                          κ = 2., δ=1.,  switch= :random,  seed = 125, ω = 0.8, kappa_switch = :off,
+@kwdef struct ModelParams
+    nagents = 3000
+    nparties = 2
+    nissues = 2
+    bounds = bounds
+    κ = 1. # this influences whether I'll vote against my party or not
+    δ = 3. # this influences the radius of candidates a party samples from
+    ω = 0.8
+    switch = :plurality
+    kappa_switch = :off
+    special_bounds = (true, (100., 5.))
+    party_pos_hardwired = false
+    voter_pos_initializor = () -> sample_1dnormal((100., 5.),
+                                 overlap_50_poss)
+end
+
+
+
+function initialize_model(;nagents = 100,
+                          nissues = 2,
+                          nparties = 2,
+                          κ = 2.,
+                          δ=1.,
+                          switch= :random,
+                          bounds = bounds,
+                          ω = 0.8,
+                          kappa_switch = :off,
                           special_bounds = (false, bounds),
-                          voter_pos_initializor = () -> sample_1dnormal(special_bounds[2] ),
+                          voter_pos_initializor = () -> sample_1dnormal(special_bounds[2]),
                           party_pos_hardwired = false)
+
     if special_bounds[1] == true
         space = abm.ContinuousSpace(special_bounds[2], periodic = false)
     else
@@ -610,7 +628,6 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     end
 
 
-    rng = Random.MersenneTwister(seed)
     # postype = typeof(ntuple(x -> 1.,nissues))
 
     #=
@@ -652,7 +669,7 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
                       :kappa_switch => kappa_switch,
                       :is_at_step => 0)
 
-    model = abm.ABM(Voter{nissues}, space; rng,properties = properties)
+    model = abm.ABM(Voter{nissues}, space;properties = properties)
 
     for i in 1:nagents
         vi = Voter(i, nissues=nissues, κ = model.properties[:κ], pos = voter_pos_initializor)
@@ -703,6 +720,8 @@ function initialize_model(nagents::Int, nissues::Int, nparties;
     return(model)
 end
 
+
+initialize_model(x::ModelParams) = initialize_model(;ntfromstruct(x)...)
 
 
 function assume_initial_partyid!(i, m)
