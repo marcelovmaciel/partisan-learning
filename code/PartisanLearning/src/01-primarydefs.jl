@@ -1,5 +1,4 @@
 # * Issue Salience model
-
 module IssueSalience
 
 import Dictionaries as DICT

@@ -15,7 +15,7 @@ using StatsBase
 using AlgebraOfGraphics
 using ProgressMeter
 
-include("../test/visualize_model.jl")
+# include("../test/visualize_model.jl")
 
 m_params = pla.ModelParams()
 m = pla.initialize_model(m_params)
@@ -127,8 +127,10 @@ function collect_per_overlap(whichdist)
     (pla.overlap_20_poss |>
         overlap_initializor |>
         x-> pla.ModelParams(voter_pos_initializor = x) |>
-        collect_some_measures)
+        collect_runs)
 end
+
+
 
 overlap20df = collect_per_overlap(pla.overlap_20_poss)
 

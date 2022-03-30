@@ -1,30 +1,4 @@
-# * Party Label model
-include("utils.jl")
-
-#= This is a copy of the Party id model. Why am I copying
-it? Because the previous version is not wrong, but design needs to change. I
-still wanna play with the other version so I'll keep it. =#
-#=
-What will change in this version?
-I'll need to add some sticky parties,
-rather than having parties as a latent thing
-in the model. So this changes the initial condition.
-I'll also need to change how people set their party position...
-Also, the update rule is completely different now.
-See the notes/sketchsofaModel/partyid-sketch.pdf design
-document for more on that.
-=#
-
 module PartyLabel
-# ** Initial condition
-#= the initial logic is the following:
-• One initializes the voters;
-• Some c number of voters will be treated as “candidates”;
-• Each voter votes for the candidate who is closest to them. The one
-with the most votes becomes the incumbent;
-• Maybe each voter treats their candidate id as their initial partyid?
-This is a model initialization artifact=#
-
 import Agents as abm
 import Distributions as distri
 import Distances as dist
@@ -41,6 +15,72 @@ using ProgressMeter
 using Distributions
 using NamedTupleTools
 
+# * Utils
+function DictionariesToDataFrame(dictlist)
+  ret = Dict()                 #Holds dataframe's columns while we build it
+  #Get all unique keys from dictlist and make them entries in ret
+  for x in unique([y for x in [collect(keys(x)) for x in dictlist] for y in x])
+    ret[x] = []
+  end
+  for row in dictlist          #Loop through each row
+    for (key,value) in ret     #Use ret to check all possible keys in row
+      if haskey(row,key)       #Is key present in row?
+        push!(value, row[key]) #Yes
+      else                     #Nope
+        push!(value, nothing)  #So add nothing. Keeps columns same length.
+      end
+    end
+  end
+  #Fix the data types of the columns
+  for (k,v) in ret                             #Consider each column
+    row_type = unique([typeof(x) for x in v])  #Get datatypes of each row
+    if length(row_type)==1                     #All rows had same datatype
+      row_type = row_type[1]                   #Fetch datatype
+      ret[k]   = convert(Array{row_type,1}, v) #Convert column to that type
+    end
+  end
+  #DataFrame is ready to go!
+  return DF.DataFrame(ret)
+end
+
+function dictmap(l,d)
+    Dict(Pair(k,l(v)) for (k,v) in d)
+end
+
+function kvdictmap(l,d)
+    Dict(Pair(k,l(k,v)) for (k,v) in d)
+end
+
+function kdictmap(l,d)
+    Dict(Pair(k,l(k)) for (k,_) in d)
+end
+
+
+# * Party Label model
+#= This is a copy of the Party id model. Why am I copying
+it? Because the previous version is not wrong, but design needs to change. I
+still wanna play with the other version so I'll keep it. =#
+#=
+What will change in this version?
+I'll need to add some sticky parties,
+rather than having parties as a latent thing
+in the model. So this changes the initial condition.
+I'll also need to change how people set their party position...
+Also, the update rule is completely different now.
+See the notes/sketchsofaModel/partyid-sketch.pdf design
+document for more on that.
+=#
+
+
+
+# ** Initial condition
+#= the initial logic is the following:
+• One initializes the voters;
+• Some c number of voters will be treated as “candidates”;
+• Each voter votes for the candidate who is closest to them. The one
+with the most votes becomes the incumbent;
+• Maybe each voter treats their candidate id as their initial partyid?
+This is a model initialization artifact=#
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
@@ -1083,16 +1123,9 @@ function get_2candidates_distance(m)
 end
 
 
-
-
 function mean_loyalty(m)
 [get_keep_party_id_prob(i,m) for i in abm.allids(m)] |>  mean
         end
-
-function prop_pswitch(m)
-    m.properties[:party_switches][end]/m.properties[:nagents]
- end
-
 
 loyalty(i) = get_keep_party_id_prob(i.id,m)
 f_ideal_point(i) = i.pos[1]
