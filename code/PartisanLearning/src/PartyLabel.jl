@@ -1,4 +1,5 @@
 # * Party Label model
+include("utils.jl")
 
 #= This is a copy of the Party id model. Why am I copying
 it? Because the previous version is not wrong, but design needs to change. I
@@ -13,6 +14,7 @@ Also, the update rule is completely different now.
 See the notes/sketchsofaModel/partyid-sketch.pdf design
 document for more on that.
 =#
+
 module PartyLabel
 # ** Initial condition
 #= the initial logic is the following:
@@ -105,18 +107,6 @@ function Voter(id::Int;nissues =  1,
     return(Voter{nissues}(id,pos(),amIaCandidate, κ, myPartyId))
 end
 
- function dictmap(l,d)
-    Dict(Pair(k,l(v)) for (k,v) in d)
-end
-
-function kvdictmap(l,d)
-    Dict(Pair(k,l(k,v)) for (k,v) in d)
-end
-
-function kdictmap(l,d)
-    Dict(Pair(k,l(k)) for (k,_) in d)
-end
-
 
 function sample_parties_pos(nparties, model)
     ids = collect(abm.allids(model))
@@ -177,8 +167,6 @@ function sample_candidates2(party,m,n=4)
 
 end
 
-
-
 function get_random_candidates(m)
     parties_supporters = get_parties_supporters(m)
         if m.properties[:incumbent_party] == 0
@@ -189,7 +177,6 @@ function get_random_candidates(m)
                 parties_supporters)
     end
 end
-
 
 function sample_candidates(party, m)
     if m.properties[:is_at_step] >=4
@@ -1090,6 +1077,7 @@ end
 
 
 
+
 function get_2candidates_distance(m)
     parties = m.properties[:parties_ids]
     candidate1_pos = m[m.properties[:parties_candidateid_ppos_δ][parties[1]][:partycandidate]].pos
@@ -1101,26 +1089,36 @@ end
 
 
 
-# function static_preplot!(ax,m)
+function mean_loyalty(m)
+[get_keep_party_id_prob(i,m) for i in abm.allids(m)] |>  mean
+        end
 
-#     xs,ys = begin
-#         poss = [x[:partyposition]
-#                 for x in values(m.properties[:parties_candidateid_ppos_δ])]
-#         xs = [x[1] for x in poss]
-#         ys = [x[2] for x in poss]
-#         xs,ys
-#     end
+function prop_pswitch(m)
+    m.properties[:party_switches][end]/m.properties[:nagents]
+ end
 
-#      # be sure that the teacher will be above students
-#     obj= GLMakie.scatter!(xs,ys,
-#                           marker = :diamond,
-#                           markersize = 25,
-#                           color = :green)
-#     GLMakie.hidedecorations!(ax)
-#     GLMakie.translate!(obj, 0, 0, 5)
 
-# end
+loyalty(i) = get_keep_party_id_prob(i.id,m)
+f_ideal_point(i) = i.pos[1]
 
+function prop_pswitch(m)
+    m.properties[:party_switches][end]/m.properties[:nagents]
+end
+
+function prop_crossvoting(m)
+    m.properties[:cross_voting][end]/m.properties[:nagents]
+end
+
+
+foursteps!(m) =  for _ in 1:4 model_step!(m) end
+
+
+datapath = "../../../data"
+
+
+
+# * FIXME: all code below is rotten
+# only use it for inspiration!
 function saltellidict(varnames::Vector{String}, bounds)
         Dict("names" => varnames,
              "bounds" => PythonCall.PyList(bounds),
@@ -1143,10 +1141,6 @@ function boundsdict_toparamsdf(varnames, bounds;samplesize= 2^8)
     end
     return(foodf)
 end
-
-
-datapath = "../../../data"
-
 
 function run_analysis_onRow(sim_cons,
                             row,
@@ -1218,34 +1212,6 @@ function system_measure_AtRepetions(whichParametization)
                data))
 end
 
-
-function DictionariesToDataFrame(dictlist)
-  ret = Dict()                 #Holds dataframe's columns while we build it
-  #Get all unique keys from dictlist and make them entries in ret
-  for x in unique([y for x in [collect(keys(x)) for x in dictlist] for y in x])
-    ret[x] = []
-  end
-  for row in dictlist          #Loop through each row
-    for (key,value) in ret     #Use ret to check all possible keys in row
-      if haskey(row,key)       #Is key present in row?
-        push!(value, row[key]) #Yes
-      else                     #Nope
-        push!(value, nothing)  #So add nothing. Keeps columns same length.
-      end
-    end
-  end
-  #Fix the data types of the columns
-  for (k,v) in ret                             #Consider each column
-    row_type = unique([typeof(x) for x in v])  #Get datatypes of each row
-    if length(row_type)==1                     #All rows had same datatype
-      row_type = row_type[1]                   #Fetch datatype
-      ret[k]   = convert(Array{row_type,1}, v) #Convert column to that type
-    end
-  end
-  #DataFrame is ready to go!
-  return DF.DataFrame(ret)
-end
-
 function get_ParametizationMeasuresMeans(whichparametrization)
     repetitionsvalues= DictionariesToDataFrame(system_measure_AtRepetions(whichparametrization))
     return(DF.mapcols(StatsBase.mean, repetitionsvalues))
@@ -1254,7 +1220,5 @@ end
 
 # TODO: Check performance
 # TODO: Turn all dict calls into simple mutating static arrays
-
-
 
 end  # this is where the module ends!!!
