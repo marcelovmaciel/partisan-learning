@@ -17,14 +17,10 @@ using ProgressMeter
 
 include("../test/visualize_model.jl")
 
-
-
 m_params = pla.ModelParams()
 m = pla.initialize_model(m_params)
 
 # * Vis functions
-
-
 p1 = m.properties[:parties_ids][1]
 p2 = m.properties[:parties_ids][2]
 
@@ -76,7 +72,6 @@ end
 fig,f = single_interactive_vis(m)
 
 
-overlap_initializor(whichdist) = () -> pla.sample_1dnormal((100., 5.), whichdist)
 
 function get_data_initial_dist(params, nsteps= 20)
 

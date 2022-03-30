@@ -70,6 +70,8 @@ overlap_20_poss = (distri.Normal(37.25, 10), distri.Normal(62.75,10))
 more_dispersed_1d_poss = (distri.Normal(50 - 20.25/2,15),
                           distri.Normal(50 + 20.25/2,15))
 
+
+
 function sample_1dnormal(bound, poss = overlap_50_poss)
 
     #= - I'll simply put a constant in one dimension and work on the other
@@ -99,6 +101,8 @@ function sample_1dnormal(bound, poss = overlap_50_poss)
     return(pos)
 end
 
+
+overlap_initializor(whichdist) = () -> sample_1dnormal((100., 5.), whichdist)
 
 function Voter(id::Int;nissues =  1,
                pos = () -> sample_uniform_pos(nssissues), κ = 10.)
@@ -429,28 +433,27 @@ function secondIt_get_parties_supporters(model)
 end
 
 
-# BUG: there is an indexing problem here.
 function will_I_turnout(i,m)
-# rand(distri.Uniform(0.5,1))
+
     if m.properties[:is_at_step] > 1 &&  m.properties[:is_at_step] < 4
         lastvote = m.properties[:voterBallotTracker][i][end]
         will_I = rand(distri.Uniform(0.75,1)) < proportionmap(m.properties[:voterBallotTracker][i])[lastvote]
     else
-#        println("got before the voter")
+
         voter = m[i]
- #        println("got the voter")
+
         voterballot = m.properties[:voterBallotTracker][i]
-  #      println("got his ballot")
+
         proportion_votesi = proportionmap(voterballot)
-        #println(collect(keys(proportion_votesi)), " ", voter.myPartyId)
-        # println("got his votes proportions")
+
+
         if !(voter.myPartyId in
          keys(proportion_votesi))
         proportionvoted_for_party = 0.0
         else
             proportionvoted_for_party = proportion_votesi[voter.myPartyId]
         end
-        #println("got his party proportion: ", proportionvoted_for_party)
+
         will_I = rand(distri.Uniform(0.75,1)) < proportionvoted_for_party
     end
 
@@ -458,11 +461,9 @@ function will_I_turnout(i,m)
 end
 
 
-
 function get_supporters_who_turnout(supporters,m)
     filter(i->will_I_turnout(i,m),supporters)
 end
-
 
 
 function get_parties_supporters(model)
@@ -472,7 +473,6 @@ function get_parties_supporters(model)
                     model.properties[:voters_partyids]))))
         for k in model.properties[:parties_ids])
 end
-
 
 
 function secondIt_get_primaries_votes(m,
@@ -488,7 +488,6 @@ function secondIt_get_primaries_votes(m,
     return(dictmap(supporters->map(get_closest_toI,supporters),
                 parties_supporters))
 end
-
 
 function get_primaries_votes(m, primariesCandidatesDict)
 
@@ -565,7 +564,6 @@ function initialize_incumbent_streak_counter!(m)
     m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = ntuple(x->0.,Val(m.properties[:nissues]))
 end
 
-
 function get_median_pos(m)
     dims = m.properties[:nissues]
     medians = Vector{Float64}()
@@ -589,8 +587,7 @@ function get_median_pos(m)
     kappa_switch = :off
     special_bounds = (true, (100., 5.))
     party_pos_hardwired = false
-    voter_pos_initializor = () -> sample_1dnormal((100., 5.),
-                                 overlap_50_poss)
+    voter_pos_initializor = overlap_initializor(overlap_50_poss)
 end
 
 
@@ -1033,7 +1030,6 @@ end
 function get_representativeness(v,m)
     -sum(v)/m.properties[:nagents]
 end
-
 
 function get_partyshare(m)
     proportionmap([m.properties[:voterBallotTracker][agentid][end]
