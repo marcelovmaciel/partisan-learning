@@ -1,45 +1,3 @@
-
-# * Utils
-function DictionariesToDataFrame(dictlist)
-  ret = Dict()                 #Holds dataframe's columns while we build it
-  #Get all unique keys from dictlist and make them entries in ret
-  for x in unique([y for x in [collect(keys(x)) for x in dictlist] for y in x])
-    ret[x] = []
-  end
-  for row in dictlist          #Loop through each row
-    for (key,value) in ret     #Use ret to check all possible keys in row
-      if haskey(row,key)       #Is key present in row?
-        push!(value, row[key]) #Yes
-      else                     #Nope
-        push!(value, nothing)  #So add nothing. Keeps columns same length.
-      end
-    end
-  end
-  #Fix the data types of the columns
-  for (k,v) in ret                             #Consider each column
-    row_type = unique([typeof(x) for x in v])  #Get datatypes of each row
-    if length(row_type)==1                     #All rows had same datatype
-      row_type = row_type[1]                   #Fetch datatype
-      ret[k]   = convert(Array{row_type,1}, v) #Convert column to that type
-    end
-  end
-  #DataFrame is ready to go!
-  return DF.DataFrame(ret)
-end
-
-function dictmap(l,d)
-    Dict(Pair(k,l(v)) for (k,v) in d)
-end
-
-function kvdictmap(l,d)
-    Dict(Pair(k,l(k,v)) for (k,v) in d)
-end
-
-function kdictmap(l,d)
-    Dict(Pair(k,l(k)) for (k,_) in d)
-end
-
-
 # * Party Label model
 #= This is a copy of the Party id model. Why am I copying
 it? Because the previous version is not wrong, but design needs to change. I
@@ -226,7 +184,6 @@ function sample_candidates(party, m)
     end
 
 end
-
 
 
 function select_primariesCandidates(model::abm.ABM)
@@ -596,7 +553,6 @@ function get_median_pos(m)
     return(medians)
  end
 
-
 @kwdef struct ModelParams
     nagents = 3000
     nparties = 2
@@ -611,7 +567,6 @@ function get_median_pos(m)
     party_pos_hardwired = false
     voter_pos_initializor = overlap_initializor(overlap_50_poss)
 end
-
 
 
 function initialize_model(;nagents = 100,
@@ -932,8 +887,6 @@ function set_agents_new_κ!(model, kappa_switch= :off)
     end
 end
 
-
-
 function model_step!(model)
 
     model.properties[:is_at_step] += 1
@@ -1000,230 +953,6 @@ function model_step!(model)
         set_new_parties_poss!(model,newposs)
 
     end
-
-
-
 end
-
-
-# ** Data Collection
-#=
-
-FIXME: Test what happens with the  proportion of voters who voted against PartyId candidate
-
-Maybe also some measures of the distribution? Who knows....
-
-• for how long candidate remains winning.
-• The proportion of voters voted for someone who was not their party
-candidate.
-• What is the distance between the candidate the agent voted for and
-the candidate of their party.
-=#
-
-
-#adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
-
-function get_distance_MyCandidatevsPartyCandidate(agentid, model)
-
-
-    closest_to_me = get_closest_candidate(agentid,model)[1]
-    mypartycandidate = model.properties[:parties_candidateid_ppos_δ][model[agentid].myPartyId][:partycandidate]
-    two_candidates_distance = dist.euclidean(model[closest_to_me].pos,
-                                             model[mypartycandidate].pos)
-    return(two_candidates_distance)
-
-end
-
-function get_distance_IvsPartyCandidate(agentid,model)
-    mypartycandidate = model.properties[:parties_candidateid_ppos_δ][model[agentid].myPartyId][:partycandidate]
-    return(dist.euclidean(model[agentid].pos,
-                          model[mypartycandidate].pos))
-end
-
-
-get_distance_IvsPartyCandidate(agent::Voter,model) = get_distance_IvsPartyCandidate(agent.id,model)
-get_distance_MyCandidatevsPartyCandidate(agent::Voter, model) = get_distance_MyCandidatevsPartyCandidate(agent.id, model)
-
-
-function get_representativeness(m::abm.ABM)
-    -sum([get_distance_IvsPartyCandidate(i,m) for i in abm.allids(m)])/m.properties[:nagents]
-end
-
-function get_representativeness(v,m)
-    -sum(v)/m.properties[:nagents]
-end
-
-function get_partyshare(m)
-    proportionmap([m.properties[:voterBallotTracker][agentid][end]
-                   for agentid in abm.allids(m)])
-end
-
-function get_ENP(m)
-    shares = get_partyshare(m)
-    return(1/sum([i^2 for i in collect(values(shares))]))
-end
-
-
-function normalized_ENP(m)
-    get_ENP(m)/m.properties[:ncandidates]
-end
-
-
-# x->x[x.properties[:incumbent_party]].myPartyId, # get incumbent_party
-
-function get_incumbent_eccentricity(m)
-      dist.euclidean(m[m.properties[:incumbent_party]].pos,
-                   m.properties[:median_pos])
-end
-
-
-function get_mean_contestant_eccentricity(m)
-    contestants = filter(pid-> pid != m.properties[:incumbent_party],
-                         m.properties[:parties_ids])
-    (contestants .|>
-      (contestant -> dist.euclidean(m[contestant].pos,
-                                    m.properties[:median_pos])) |>
-                                        mean)
-end
-
-
-
-function get_party_supporters_mean(pid, m, whichdim = 1 )
-    party_supporters = get_parties_supporters(m)[pid]
-    mean(vcat(map(x->collect(m[x].pos[whichdim]), party_supporters)...))
-end
-
-
-
-
-function get_2candidates_distance(m)
-    parties = m.properties[:parties_ids]
-    candidate1_pos = m[m.properties[:parties_candidateid_ppos_δ][parties[1]][:partycandidate]].pos
-    candidate2_pos = m[m.properties[:parties_candidateid_ppos_δ][parties[2]][:partycandidate]].pos
-    dist.euclidean(candidate1_pos,
-                   candidate2_pos)
-end
-
-
-function mean_loyalty(m)
-[get_keep_party_id_prob(i,m) for i in abm.allids(m)] |>  mean
-        end
-
-loyalty(i) = get_keep_party_id_prob(i.id,m)
-f_ideal_point(i) = i.pos[1]
-
-function prop_pswitch(m)
-    m.properties[:party_switches][end]/m.properties[:nagents]
-end
-
-function prop_crossvoting(m)
-    m.properties[:cross_voting][end]/m.properties[:nagents]
-end
-
 
 foursteps!(m) =  for _ in 1:4 model_step!(m) end
-
-
-datapath = "../../../data"
-
-
-
-# * FIXME: all code below is rotten
-# only use it for inspiration!
-function saltellidict(varnames::Vector{String}, bounds)
-        Dict("names" => varnames,
-             "bounds" => PythonCall.PyList(bounds),
-             "num_vars" => length(varnames))
-    end
-
-
-function boundsdict_toparamsdf(varnames, bounds;samplesize= 2^8)
-    saltelli = pyimport("SALib.sample.saltelli")
-
-    boundsdict = saltellidict(varnames, bounds)
-
-    problem_array = pyconvert(Array,
-                              saltelli.sample(boundsdict, samplesize,
-                                              calc_second_order = true ))
-    foodf = DF.DataFrame()
-
-    for (index,value) in enumerate(boundsdict["names"])
-        setproperty!(foodf,Symbol(value), problem_array[:, index])
-    end
-    return(foodf)
-end
-
-function run_analysis_onRow(sim_cons,
-                            row,
-                            rowIdx,
-                            whichIter,
-                            threadId)
-    m = initialize_model(sim_cons[:nagents], sim_cons[:nissues], row.ncandidates,
-                             κ=  row.κ, δ =  row.δ)
-
-    adata = [(a->(HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-             (a->(get_distance_IvsPartyCandidate(a,m)), d -> get_representativeness(d,m))]
-
-    mdata = [normalized_ENP,
-           x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
-             x-> x.properties[:party_switches][end]/x.properties[:nagents],
-             get_incumbent_eccentricity]
-
-    ad,md = abm.run!(m, abm.dummystep, model_step!, sim_cons[:niterations] ;
-                       adata= adata,
-                       mdata=mdata)#, when = collect_steps, when_model= collect_steps)
-
-    alabels = ["step","Prop¬PartyId", "Representativeness"]
-    mlabels = ["step", "NENP", "LongestIStreak", "PartySwitches", "Eccentricity"]
-    DF.rename!(ad, alabels)
-    DF.rename!(md,mlabels)
-    df = hcat(ad, md, makeunique=true)
-    DF.select!(df, DF.Not(:step_1))
-
-    CSV.write(joinpath(datapath,
-                       "row$(rowIdx)_iter$(whichIter)_thread$threadId.csv"),
-              df)
-    m = nothing
-    df = nothing
-end
-
-
-function run_analysis(sim_cons, dm, threadId)
-
-    ProgressMeter.@showprogress 5 "Simulating..."  for iter in 1:10
-         for (rowidx,
-                                             rowval) in enumerate(eachrow(dm))
-            run_analysis_onRow(sim_cons,
-                               rowval,
-                               rowidx,
-                               iter,
-                               threadId)
-        end
-    end
-end
-
-
-get_mean_col_val(df,col,niterations)= StatsBase.mean(df[end-(niterations-1):end,col])
-
-function get_system_measures(df)
-    vars =  names(DF.select(df, DF.Not([:step])))
-
-    Dict(Pair(var, get_mean_col_val(df, var, 20)) for var in vars)
-
-end
-
-readdf(dfname) = CSV.read(joinpath(datapath,dfname),
-                          DF.DataFrame)
-
-function system_measure_AtRepetions(whichParametization)
-    data = readdir(datapath)
-
-    map(get_system_measures∘readdf,
-        filter(x-> ("row$(whichParametization)" == split(x, "_")[1]),
-               data))
-end
-
-function get_ParametizationMeasuresMeans(whichparametrization)
-    repetitionsvalues= DictionariesToDataFrame(system_measure_AtRepetions(whichparametrization))
-    return(DF.mapcols(StatsBase.mean, repetitionsvalues))
-end
