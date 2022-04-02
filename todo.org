@@ -86,9 +86,10 @@ the main factor... Or maybe not.
 * DONE fix the candidate choice sampler
 - Simply filter before sampling!
 
-
 * DONE Add \(\kappa\) as field for agents
 
+
+* TODO [#B] REREAD [[cite:&aldrich1983downsian]]
 
 * TODO [#B] Read analysis papers
 - [X] [[cite:&siegel18_analy_comput_model]]
@@ -103,7 +104,7 @@ sure of exactly how the different pieces of the model work. Then I'll worry
 about describing the comparative statics in a non-formal way.
 #+end_quote
 
-* TODO plot the within party shares and prop people like me
+* KILL plot the within party shares and prop people like me
 
 * DONE implement the new distributional assumption;
 - I'll simply put a constant in one dimension and work on the other lol.
@@ -115,6 +116,10 @@ about describing the comparative statics in a non-formal way.
 
 * OKAY implement the new initial party id
 * DONE implement visualization of party polarization
+
+
+
+
 * TODO [#C] Create a representation gap incumbency advantage variant
  Right now the model is not presenting any interesting dynamics. Winning doesn't
  feedback into the system, nor the dissatisfaction of voters is taken into
@@ -137,9 +142,7 @@ How I'll implement that:
   #+end_src
 - Then I get for each party the supporters who will actually vote in this primary.
 
-* TODO [#A] Pick candidates from turnout voters
 
-* PROJ [#A] Redesign this
 
 * DONE [#C] test initial vote
 
@@ -152,3 +155,16 @@ the initial round before we have party loyalties kicking in.
 * DONE [#A] implement more concentrated distribution
 
 * DONE [#B] Run small pipeline comparing the three distributions
+
+
+* DONE [#A] Pick candidates from turnout voters
+
+* TODO [#A] Write pipelines to test for those 3 expected behaviors!
+  - Extremists must evolve to have stronger party ids;
+  - Candidates Should Become more Extreme;
+  - Those who turnout should be more extreme WITH TIME!;
+
+* TODO [#A] *Weight party id* in defining party position;
+
+* PROJ [#A] Redesign this
+

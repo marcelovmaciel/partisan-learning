@@ -3,7 +3,7 @@ Pkg.activate("../")
 
 using Revise
 import PartisanLearning as pl
-const pla = pl.PartyLabel
+
 
 using GLMakie
 using Agents
@@ -15,10 +15,14 @@ using StatsBase
 using AlgebraOfGraphics
 using ProgressMeter
 
+
+
 # include("../test/visualize_model.jl")
 
-m_params = pla.ModelParams()
-m = pla.initialize_model(m_params)
+m_params = pl.ModelParams()
+
+
+m = pl.initialize_model(m_params)
 
 # * Vis functions
 p1 = m.properties[:parties_ids][1]
@@ -45,16 +49,16 @@ end
 
 
 function single_interactive_vis(m)
-    foursteps!(m)
-    adata = [(a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+    pl.foursteps!(m)
+    adata = [(a->(pl.get_distance_IvsPartyCandidate(a,m)), d -> pl.get_representativeness(d,m))]
 
-    mdata =  [pla.get_2candidates_distance, prop_pswitch, mean_loyalty]
+    mdata =  [pl.get_2candidates_distance, pl.prop_pswitch, pl.mean_loyalty]
 
     alabels = ["rep"]
     mlabels = ["dist c1c2", "prop_switch","mean_loyalty"]
-    fig,pl2 = abmexploration(m;
-                             agent_step! = pla.abm.dummystep,
-                             model_step! = pla.model_step!,
+    fig,pl2 = pl.abmexploration(m;
+                             agent_step! = pl.abm.dummystep,
+                             model_step! = pl.model_step!,
                             # adata, # BUG: this breaks the code !
                               mdata,
                              # alabels,
@@ -67,6 +71,7 @@ function single_interactive_vis(m)
     return(fig, pl2)
 end
 
+
 # * Actual test
 
 fig,f = single_interactive_vis(m)
@@ -75,26 +80,28 @@ fig,f = single_interactive_vis(m)
 
 function get_data_initial_dist(params, nsteps= 20)
 
-    m = pla.initialize_model(params)
+    m = pl.initialize_model(params)
 
-    pla.foursteps!(m)
+    pl.foursteps!(m)
 
 
-    adata = [pla.f_ideal_point]# ,
+    adata = [pl.f_ideal_point]# ,
              # loyalty] FIXME: this breaks the code!
 
-    mdata = [pla.prop_pswitch,
-             pla.mean_loyalty,
-             pla.prop_crossvoting,
-             pla.get_2candidates_distance]
+    mdata = [pl.prop_pswitch,
+             pl.mean_loyalty,
+             pl.prop_crossvoting,
+             pl.get_2candidates_distance]
 
     _,data_m= run!(m,
-                    pla.abm.dummystep,
-                    pla.model_step!, nsteps;
+                    pl.abm.dummystep,
+                    pl.model_step!, nsteps;
                     adata,
                     mdata)
     return(data_m)
 end
+
+
 
 function collect_runs(params)
 
@@ -124,23 +131,25 @@ end
 
 
 function collect_per_overlap(whichdist)
-    (pla.overlap_20_poss |>
-        overlap_initializor |>
-        x-> pla.ModelParams(voter_pos_initializor = x) |>
+    (whichdist |>
+        pl.overlap_initializor |>
+        x-> pl.ModelParams(voter_pos_initializor = x) |>
         collect_runs)
 end
 
+overlap20df = collect_per_overlap(pl.overlap_20_poss)
 
+overlap50df = collect_per_overlap(pl.overlap_50_poss)
 
-overlap20df = collect_per_overlap(pla.overlap_20_poss)
+overlap80df = collect_per_overlap(pl.overlap_80_poss)
 
-overlap50df = collect_per_overlap(pla.overlap_50_poss)
-
-overlap80df = collect_per_overlap(pla.overlap_80_poss)
 
 function concat_overlap_data(f,s,t)
 
     for (i,j) in zip([f,s,t], [:o20, :o50, :o80])
+        println(j)
+        @show first(i)
+
         df_size =  (i |> size)[1]
         i[!,:type] =[j for _ in 1:df_size]
     end
@@ -148,17 +157,23 @@ function concat_overlap_data(f,s,t)
     return(gdf)
 end
 
+
+#m_params = pl.ModelParams(\k)
+#m_params |> typeof |> fieldnames
+
+
+
 gdf =  concat_overlap_data(overlap20df,
                            overlap50df,
                            overlap80df)
 
 plt = data(gdf) * mapping(:step,
-                          :prop_pswitch,
+                          :get_2candidates_distance,
                           color = :type => nonnumeric,
                           dodge = :type => nonnumeric) * visual(BoxPlot);
 
 foo = draw(plt)
 
-stringtosave = "./plots/overlapping_pswitch.png"
+stringtosave = "./plots/overlapping_2cdist_kappa1.png"
 
 AlgebraOfGraphics.save(stringtosave, foo, px_per_unit = 5)

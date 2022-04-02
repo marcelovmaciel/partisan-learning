@@ -1,19 +1,3 @@
-module PartyLabel
-import Agents as abm
-import Distributions as distri
-import Distances as dist
-import Base.@kwdef
-using StaticArrays
-using StatsBase
-import Statistics
-# import GLMakie
-import DataFrames as DF
-using PythonCall
-using Random
-import CSV
-using ProgressMeter
-using Distributions
-using NamedTupleTools
 
 # * Utils
 function DictionariesToDataFrame(dictlist)
@@ -70,8 +54,6 @@ Also, the update rule is completely different now.
 See the notes/sketchsofaModel/partyid-sketch.pdf design
 document for more on that.
 =#
-
-
 
 # ** Initial condition
 #= the initial logic is the following:
@@ -244,8 +226,6 @@ function sample_candidates(party, m)
     end
 
 end
-
-
 
 
 
@@ -475,9 +455,11 @@ end
 
 function will_I_turnout(i,m)
 
-    if m.properties[:is_at_step] > 1 &&  m.properties[:is_at_step] < 4
+    if >(m.properties[:is_at_step],1) &&  <(m.properties[:is_at_step], 4)
         lastvote = m.properties[:voterBallotTracker][i][end]
-        will_I = rand(distri.Uniform(0.75,1)) < proportionmap(m.properties[:voterBallotTracker][i])[lastvote]
+        will_I = <(rand(distri.Uniform(0.75,1)),
+                   proportionmap(m.properties[:voterBallotTracker][i])[lastvote])
+
     else
 
         voter = m[i]
@@ -1245,9 +1227,3 @@ function get_ParametizationMeasuresMeans(whichparametrization)
     repetitionsvalues= DictionariesToDataFrame(system_measure_AtRepetions(whichparametrization))
     return(DF.mapcols(StatsBase.mean, repetitionsvalues))
 end
-
-
-# TODO: Check performance
-# TODO: Turn all dict calls into simple mutating static arrays
-
-end  # this is where the module ends!!!

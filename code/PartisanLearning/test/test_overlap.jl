@@ -6,7 +6,6 @@ using Revise
 import PartisanLearning as pl
 const is = pl.IssueSalience
 const pid = pl.PartyId
-const pla = pl.PartyLabel
 using GLMakie
 using Agents
 import Distances
@@ -22,7 +21,7 @@ include("../test/visualize_model.jl")
 function get_data_initial_dist(whichdist, nsteps= 20)
     ncandidates = 2
     nissues = 2
-    m = pla.initialize_model(1000,
+    m = pl.initialize_model(1000,
                              nissues,
                              ncandidates,
                              δ=15,
@@ -32,18 +31,18 @@ function get_data_initial_dist(whichdist, nsteps= 20)
                              kappa_switch= :off,
                              special_bounds = (true, (100., 5.)),
                              voter_pos_initializor = () ->
-                                 pla.sample_1dnormal((100., 5.),
+                                 pl.sample_1dnormal((100., 5.),
                                                      whichdist),
                              party_pos_hardwired = false)
 
-    # #(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]
+    # #(a->(pl.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]
     #
 
     for _ in 1:4
-        pla.model_step!(m)
+        pl.model_step!(m)
     end
 
-    loyalty(i) = pla.get_keep_party_id_prob(i.id,m)
+    loyalty(i) = pl.get_keep_party_id_prob(i.id,m)
     ideal_point(i) = i.pos[1]
 
     function prop_pswitch(m)
@@ -55,8 +54,9 @@ function get_data_initial_dist(whichdist, nsteps= 20)
       m.properties[:cross_voting][end]/m.properties[:nagents]
     end
 
+
     function mean_loyalty(m)
-[pla.get_keep_party_id_prob(i,m) for i in pla.abm.allids(m)] |>  pla.mean
+[pl.get_keep_party_id_prob(i,m) for i in pl.abm.allids(m)] |>  pl.mean
         end
 
 
@@ -66,12 +66,13 @@ function get_data_initial_dist(whichdist, nsteps= 20)
     mdata = [prop_pswitch, mean_loyalty, prop_crossvoting]
 
     _,data_m= run!(m,
-                    pla.abm.dummystep,
-                    pla.model_step!, nsteps;
+                    pl.abm.dummystep,
+                    pl.model_step!, nsteps;
                     adata,
                     mdata)
     return(data_m)
 end
+
 
 
 function plot_scatter(df, scattername, iter)
@@ -123,11 +124,11 @@ end
 
 
 
-overlap20df = collect_prop_voted_against(pla.overlap_20_poss)
+overlap20df = collect_prop_voted_against(pl.overlap_20_poss)
 
-overlap50df = collect_prop_voted_against(pla.standard_1d_poss)
+overlap50df = collect_prop_voted_against(pl.standard_1d_poss)
 
-overlap80df = collect_prop_voted_against(pla.overlap_80_poss)
+overlap80df = collect_prop_voted_against(pl.overlap_80_poss)
 
 
 overlap20df[!,:type] =[:o20 for _ in 1:(overlap20df |> size)[1]]
