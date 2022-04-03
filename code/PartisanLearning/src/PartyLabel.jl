@@ -1,4 +1,7 @@
 # * Party Label model
+
+
+
 #= This is a copy of the Party id model. Why am I copying
 it? Because the previous version is not wrong, but design needs to change. I
 still wanna play with the other version so I'll keep it. =#
@@ -14,13 +17,12 @@ document for more on that.
 =#
 
 # ** Initial condition
-#= the initial logic is the following:
-• One initializes the voters;
-• Some c number of voters will be treated as “candidates”;
-• Each voter votes for the candidate who is closest to them. The one
-with the most votes becomes the incumbent;
-• Maybe each voter treats their candidate id as their initial partyid?
-This is a model initialization artifact=#
+
+
+const bounds = (0,100)
+
+
+
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
@@ -29,28 +31,22 @@ mutable struct Voter{n} <: abm.AbstractAgent
     myPartyId::Int
 end
 
-  #= Note that if a voter is a candidate then its ~myPartyId~ should be the
-agent's id. Maybe I'll create an dictionary Int=> Symbol to identify the parties
-throughout simulation inspection =#
-const bounds = (0,100)
-
-
 function sample_uniform_pos(nissues = 2)
 Tuple(rand(distri.Uniform(bounds...),nissues))
 end
 
 OVL(test_cohend) = 2*distri.cdf(distri.Normal(),
                                 -abs(test_cohend)/2)
-one_modal_dispersed = (distri.Normal(50,25),distri.Normal(50,25))
+one_modal_dispersed = (distri.Normal(50,25),
+                       distri.Normal(50,25))
 
 overlap_50_poss = (distri.Normal(43.25,10), distri.Normal(56.75,10))
 overlap_80_poss = (distri.Normal(47.5,10),distri.Normal(52.5,10) )
 overlap_20_poss = (distri.Normal(37.25, 10), distri.Normal(62.75,10))
 
+
 more_dispersed_1d_poss = (distri.Normal(50 - 20.25/2,15),
                           distri.Normal(50 + 20.25/2,15))
-
-
 
 function sample_1dnormal(bound, poss = overlap_50_poss)
 
@@ -81,7 +77,6 @@ function sample_1dnormal(bound, poss = overlap_50_poss)
     return(pos)
 end
 
-
 overlap_initializor(whichdist) = () -> sample_1dnormal((100., 5.), whichdist)
 
 function Voter(id::Int;nissues =  1,
@@ -105,7 +100,6 @@ function sample_parties_pos(nparties, model)
 
     return(actualpartiesposs)
 end
-
 
 function simple_sample_candidates(party, m, n=1)
     sample(
@@ -262,8 +256,6 @@ function get_runoff_result(;primariesresult=primariesresult,m=m, seconditer_swit
                       argmax)
             end
         end
-
-
 
         return(kvdictmap(runoff, primariesproportion))
 
@@ -707,6 +699,8 @@ tambem quem que ta mais proximo da partyid dele entao ele considera dois
 candidatos se o candidato mais proximo dele 'e tipo muito mais proximo que o
 candidato do partido, uma contante kappa, ele vota no outro
 =#
+
+
 "reset_candidates!(model::abm.ABM)"
 function reset_candidates!(model::abm.ABM)
     for agent in abm.allids(model)

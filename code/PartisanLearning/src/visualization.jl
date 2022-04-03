@@ -1,18 +1,7 @@
-import Pkg
+# TODO: one function should dispatch interactive exploration
+# Another function should dispatch sweeping exploration
 
-Pkg.activate("../")
-
-using Revise
-import PartisanLearning as pl
-
-# include("../test/visualize_model.jl")
-
-m_params = pl.ModelParams()
-
-m = pl.initialize_model(m_params)
-
-# * Vis functions
-
+# * One type of model interactive vis
 
 agent_size(a,m) = (a.id in m.properties[:parties_ids] ?  37 : (a.amIaCandidate ? 35 : 5))
 agent_marker(a,m) = if a.id in m.properties[:parties_ids] '♠' else '∘' end
@@ -38,20 +27,20 @@ end
     #           :kappa_switch => [:off, :on]) FIXME: this breaks the code
 
 function single_interactive_vis(m)
-    pl.foursteps!(m)
+    foursteps!(m)
     az(a) = agent_size(a,m)
     am(a) = agent_marker(a,m)
     ac(a) = agent_colors_2parties(a,m)
     println("got here")
-    adata = [(a->(pl.get_distance_IvsPartyCandidate(a,m)), d -> pl.get_representativeness(d,m))]
+    adata = [(a->(get_distance_IvsPartyCandidate(a,m)), d -> get_representativeness(d,m))]
 
-    mdata =  [pl.get_2candidates_distance, pl.prop_pswitch, pl.mean_loyalty]
+    mdata =  [get_2candidates_distance, prop_pswitch, mean_loyalty]
 
     alabels = ["rep"]
     mlabels = ["dist c1c2", "prop_switch","mean_loyalty"]
-    fig,pl2 = pl.abmexploration(m;
-                             agent_step! = pl.abm.dummystep,
-                             model_step! = pl.model_step!,
+    fig,pl2 = abmexploration(m;
+                             agent_step! = abm.dummystep,
+                             model_step! = model_step!,
                             # adata, # BUG: this breaks the code !
                               mdata,
                              # alabels,
@@ -64,30 +53,28 @@ function single_interactive_vis(m)
     return(fig, pl2)
 end
 
-# * Actual test
 
-fig,f = single_interactive_vis(m)
-
+# * One type of Model sweeping vis
 
 
 function get_data_initial_dist(params, nsteps= 20)
 
-    m = pl.initialize_model(params)
+    m = initialize_model(params)
 
-    pl.foursteps!(m)
+    foursteps!(m)
 
 
-    adata = [pl.f_ideal_point]# ,
+    adata = [f_ideal_point]# ,
              # loyalty] FIXME: this breaks the code!
 
-    mdata = [pl.prop_pswitch,
-             pl.mean_loyalty,
-             pl.prop_crossvoting,
-             pl.get_2candidates_distance]
+    mdata = [prop_pswitch,
+             mean_loyalty,
+             prop_crossvoting,
+             get_2candidates_distance]
 
     _,data_m= run!(m,
-                    pl.abm.dummystep,
-                    pl.model_step!, nsteps;
+                    abm.dummystep,
+                    model_step!, nsteps;
                     adata,
                     mdata)
     return(data_m)
@@ -124,48 +111,7 @@ end
 
 function collect_per_overlap(whichdist)
     (whichdist |>
-        pl.overlap_initializor |>
-        x-> pl.ModelParams(voter_pos_initializor = x) |>
+        overlap_initializor |>
+        x-> ModelParams(voter_pos_initializor = x) |>
         collect_runs)
 end
-
-overlap20df = collect_per_overlap(pl.overlap_20_poss)
-
-overlap50df = collect_per_overlap(pl.overlap_50_poss)
-
-overlap80df = collect_per_overlap(pl.overlap_80_poss)
-
-
-function concat_overlap_data(f,s,t)
-
-    for (i,j) in zip([f,s,t], [:o20, :o50, :o80])
-        println(j)
-        @show first(i)
-
-        df_size =  (i |> size)[1]
-        i[!,:type] =[j for _ in 1:df_size]
-    end
-    gdf = vcat(f,s,t)
-    return(gdf)
-end
-
-
-#m_params = pl.ModelParams(\k)
-#m_params |> typeof |> fieldnames
-
-
-
-gdf =  concat_overlap_data(overlap20df,
-                           overlap50df,
-                           overlap80df)
-
-plt = data(gdf) * mapping(:step,
-                          :get_2candidates_distance,
-                          color = :type => nonnumeric,
-                          dodge = :type => nonnumeric) * visual(BoxPlot);
-
-foo = draw(plt)
-
-stringtosave = "./plots/overlapping_2cdist_kappa1.png"
-
-AlgebraOfGraphics.save(stringtosave, foo, px_per_unit = 5)

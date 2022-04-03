@@ -39,4 +39,5 @@ include("utils.jl")
 include("PartyLabel.jl")
 include("measures.jl")
 include("data_collection.jl")
+include("visualization.jl")
 end
