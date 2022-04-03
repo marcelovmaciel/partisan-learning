@@ -1,6 +1,5 @@
 datapath = "../../../data"
 
-
 # * FIXME: all code below is rotten
 # only use it for inspiration!
 function saltellidict(varnames::Vector{String}, bounds)

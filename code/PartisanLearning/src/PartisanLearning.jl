@@ -2,28 +2,41 @@
 module PartisanLearning
 
 #using GLMakie
-using InteractiveDynamics
+
 import Agents as abm
+using AlgebraOfGraphics
+
+import Base.@kwdef
+
+import ColorSchemes
+import CSV
+
+
+import DataFrames as DF
 import Distributions as distri
 import Distances as dist
-import Base.@kwdef
+
+
+using GLMakie
+using InteractiveDynamics
+
+
+using NamedTupleTools
+using ProgressMeter
+using PythonCall
+
+using Random
+
 using StaticArrays
 using StatsBase
 import Statistics
-# import GLMakie
-import DataFrames as DF
-using PythonCall
-using Random
-import CSV
-using ProgressMeter
-using Distributions
-using NamedTupleTools
 
-include("utils.jl")
+
 #include("01-primarydefs.jl")
 
 #include("PartyId.jl")
-
+include("utils.jl")
 include("PartyLabel.jl")
-
+include("measures.jl")
+include("data_collection.jl")
 end

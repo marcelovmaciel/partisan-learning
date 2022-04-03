@@ -1,9 +1,9 @@
 import Pkg
+
 Pkg.activate("../")
 
 using Revise
 import PartisanLearning as pl
-
 
 using GLMakie
 using Agents
@@ -28,8 +28,8 @@ m = pl.initialize_model(m_params)
 p1 = m.properties[:parties_ids][1]
 p2 = m.properties[:parties_ids][2]
 
-agent_size(a) = (a.id in m.properties[:parties_ids] ?  37 : (a.amIaCandidate ? 35 : 5))
-agent_marker(a) = if a.id in m.properties[:parties_ids] '♠' else '∘' end
+agent_size(a,m) = (a.id in m.properties[:parties_ids] ?  37 : (a.amIaCandidate ? 35 : 5))
+agent_marker(a,m) = if a.id in m.properties[:parties_ids] '♠' else '∘' end
 
 function agent_colors_2parties(a)
     if a.id == m.properties[:incumbent_party]
@@ -50,6 +50,8 @@ end
 
 function single_interactive_vis(m)
     pl.foursteps!(m)
+    agent_size(a) = agent_size(a,m)
+    agent_marker(a) = agent_marker(a,m)
     adata = [(a->(pl.get_distance_IvsPartyCandidate(a,m)), d -> pl.get_representativeness(d,m))]
 
     mdata =  [pl.get_2candidates_distance, pl.prop_pswitch, pl.mean_loyalty]
