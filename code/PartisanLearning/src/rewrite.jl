@@ -1083,3 +1083,294 @@ end
 
 
 # * Getting Parties Supporters
+#= Here there are three ways of getting supporters
+- The normal way;
+- The pre-step way; 
+- The filtering for turnout way; 
+=#
+
+
+
+
+
+
+
+# * Stepping
+
+
+
+function assume_initial_partyid!(i, m)
+    if (m.properties[:is_at_step] == 4) && (!in(i,m.properties[:parties_ids]))
+    pairs = collect(proportionmap(m.properties[:voterBallotTracker][i]))
+    vals = first.(pairs)
+    weights = last.(pairs)
+    which_party_id_to_assume = sample(vals, Weights(weights))
+    m[i].myPartyId = which_party_id_to_assume
+    m.properties[:voters_partyids][i] = m[i].myPartyId
+    else
+        nothing
+    end
+end
+
+
+"reset_candidates!(model::abm.ABM)"
+function reset_candidates!(model::abm.ABM)
+    for agent in abm.allids(model)
+        model[agent].amIaCandidate = false
+    end
+end
+
+"candidates_iteration_setup!(model::abm.ABM)"
+function candidates_iteration_setup!(m::abm.ABM, switch)
+    reset_candidates!(m)
+    set_candidates!(m, switch)
+end
+
+
+function get_whichCandidatePartyAgentVotesfor(agentid, model)
+    κ = model.properties[:κ]
+
+    closest_to_me_id_pid = get_closest_candidate(agentid,model)
+
+    mypartycandidate = model.properties[:parties_candidateid_ppos_δ][model[agentid].myPartyId][:partycandidate]
+
+    whoillvotefor = (mypartycandidate, model[agentid].myPartyId)
+
+    two_candidates_distance = dist.euclidean(model[closest_to_me_id_pid[1]].pos,
+                                             model[mypartycandidate].pos)
+
+
+    if two_candidates_distance > κ
+        whoillvotefor = closest_to_me_id_pid
+    end
+
+    return(whoillvotefor)
+
+end
+
+function get_proportion_peers_voteLikeMe(agentid,model)
+    # This function only makes sense after updating m.properties[:voterBallotTracker]
+    # and then updating the model.properties[:withinpartyshares]
+    shares = model.properties[:withinpartyshares]
+    partyImVotingFor = get_whichCandidatePartyAgentVotesfor(agentid,model)[2]
+    if !(partyImVotingFor in
+         keys(shares[model[agentid].myPartyId]))
+        proportion = 0.0
+    else
+        proportion = shares[model[agentid].myPartyId][partyImVotingFor]
+    end
+    return(proportion)
+end
+
+
+function HaveIVotedAgainstMyParty(agentid::Int, model)
+    mypartycandidate = model.properties[:parties_candidateid_ppos_δ][model[agentid].myPartyId][:partycandidate]
+    mycandidate = get_whichCandidatePartyAgentVotesfor(agentid, model)[1]
+    return(mycandidate != mypartycandidate)
+end
+
+HaveIVotedAgainstMyParty(agent::Voter, model) = HaveIVotedAgainstMyParty(agent.id,model)
+
+#=
+1. Pick the proportion of iterations that I voted for the party I’m voting
+for in this iteration.
+2. Pick the proportion of people from my party that voted
+different from me;
+- I change my party id to this other party with a probability equal to tanh(proportion 1 + proportion 2). =#
+
+function get_keep_party_id_prob(agentid,model)
+    myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
+    proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
+    proportion_peers_like_me = get_proportion_peers_voteLikeMe(agentid,model)
+    # FIXME: check if this proportion is correct
+
+    if HaveIVotedAgainstMyParty(agentid,model)
+        keep_party_id_prob = proportion_IvotedForThisParty *  (1-proportion_peers_like_me)
+    else
+        keep_party_id_prob = proportion_IvotedForThisParty * proportion_peers_like_me
+    end
+
+    if (in(agentid,model.properties[:parties_ids])) || (model[agentid].amIaCandidate)
+        keep_party_id_prob = 1.0
+    end
+
+    return(keep_party_id_prob)
+end
+
+function update_partyid!(agentid,model,
+                         keep_party_id_prob = get_keep_party_id_prob(agentid,model))
+    myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
+
+    if rand() > keep_party_id_prob
+        model[agentid].myPartyId = myLast_PartyVote
+        model.properties[:party_switches][end]+=1
+    end
+end
+
+function update_streakCounter!(m)
+    if m.properties[:incumbent_party] != m.properties[:incumbent_streak_counter].old_incumbentholder
+        push!(m.properties[:incumbent_streak_counter].has_switchedlist, true)
+        m.properties[:incumbent_streak_counter].current_streak = 1
+    else
+        m.properties[:incumbent_streak_counter].current_streak +=1
+        push!(m.properties[:incumbent_streak_counter].has_switchedlist, false)
+    end
+
+    if m.properties[:incumbent_streak_counter].current_streak > m.properties[:incumbent_streak_counter].longest_streak[:streak_value]
+        m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = m[m.properties[:incumbent_party]].pos
+        m.properties[:incumbent_streak_counter].longest_streak[:streak_value] = m.properties[:incumbent_streak_counter].current_streak
+    end
+end
+
+
+# this only makes sense AFTER updating the agent partyid
+# but BEFORE updating the global voters_partyids
+function add_partyswitch_tocounter!(i,m)
+    if m[i].myPartyId != m.properties[:voters_partyids][i]
+        m.properties[:party_switches][end]+=1
+        end
+end
+
+
+function add_crossvoting_tocounter!(i,m)
+    if HaveIVotedAgainstMyParty(i,m)
+        m.properties[:cross_voting][end] +=1
+    end
+end
+
+
+function get_new_supporters(model, old_supporters)
+    current_supporters = get_parties_supporters(model)
+    new_supporters = kvdictmap((k,v)-> setdiff(v,old_supporters[k]), current_supporters)
+    return(new_supporters)
+end
+
+function get_mean_among_supporters(supporters::Vector, model)
+
+        [mean(model[i].pos[issue]
+              for i in supporters)
+         for issue in 1:model.properties[:nissues]]
+end
+
+function get_new_parties_poss(model, new_supporters, old_supporters)
+    ω = model.properties[:ω]
+
+    mean_previous_supporters = dictmap(v->get_mean_among_supporters(v,model),
+                                       old_supporters )
+    # new_supporters = kvdictmap((k,v)-> isempty(v) ? old_supporters[k] : v, new_supporters)
+    # if any(values(dictmap(isempty,new_supporters)))
+    #               mean_new_supporters = mean_previous_supporters
+    # else
+    mean_new_supporters = kvdictmap((k,v)-> isempty(v) ? model[k].pos : get_mean_among_supporters(v,model),
+                                  new_supporters)
+    #end
+    kvdictmap((k,v)-> (ω .* v .+ ((1-ω) .* mean_new_supporters[k])) |> Tuple, mean_previous_supporters )
+
+end
+
+function set_new_parties_poss!(model,newpposs)
+    for (k,v) in newpposs
+        model[k].pos = v
+        model.properties[:parties_candidateid_ppos_δ][k][:partyposition] = v
+    end
+end
+
+function set_agent_new_κ!(agentid,model)
+    myLast_PartyVote = model.properties[:voterBallotTracker][agentid][end]
+    proportion_IvotedForThisParty = proportionmap(model.properties[:voterBallotTracker][agentid])[myLast_PartyVote]
+    baseline_κ = model.properties[:κ]
+    model[agentid].κ = proportion_IvotedForThisParty * baseline_κ
+end
+
+# FIXME: this is a loop per step for stuff I'm not even using lol
+function set_agents_new_κ!(model, kappa_switch= :off)
+    for i in abm.allids(model)
+        if kappa_switch == :off
+            continue
+        else
+            set_agent_new_κ!(i, model)
+        end
+    end
+end
+
+# this function must be run AFTER
+# the candidates_iteration_setup!
+function pre_stepping_loop!(model)
+       for i in abm.allids(model)
+            candidates = map(x->x[:partycandidate],
+            values(model.properties[:parties_candidateid_ppos_δ]))
+            myvote = get_closest_fromList(i,candidates,model)
+            push!(model.properties[:voterBallotTracker][i], model[myvote].myPartyId)
+        end
+end
+
+function first_step_loop!(model)
+    candidates_iteration_setup!(model, :initial)
+    pre_stepping_loop!(model)
+end
+
+
+function second_third_steps_loop!(model)
+    candidates_iteration_setup!(model, :second)
+    pre_stepping_loop!(model)
+end
+
+function model_step!(model)
+
+    model.properties[:is_at_step] += 1
+    if model.properties[:is_at_step] == 1
+        first_step_loop!(model)
+    elseif (model.properties[:is_at_step] == 2) || (model.properties[:is_at_step] == 3)
+        second_third_steps_loop!(model)
+    else
+
+        for i in abm.allids(model) assume_initial_partyid!(i, model) end
+
+        candidates_iteration_setup!(model, model.properties[:switch])
+
+        old_supporters = get_parties_supporters(model) |> copy
+
+        set_agents_new_κ!(model, model.properties[:kappa_switch])
+
+        new_winner_party = model[getmostvoted(model, :iteration)].myPartyId
+
+        model.properties[:incumbent_streak_counter].old_incumbentholder = model.properties[:incumbent_party]
+        
+        model.properties[:incumbent_party] = new_winner_party
+        
+        update_streakCounter!(model)
+        
+        for i in abm.allids(model)
+            party_i_votedfor = get_whichCandidatePartyAgentVotesfor(i,model)[2]
+            push!(model.properties[:voterBallotTracker][i], party_i_votedfor )
+        end
+
+        model.properties[:withinpartyshares] = get_withinpartyshares(model)
+
+        push!(model.properties[:party_switches], 0)
+        push!(model.properties[:cross_voting], 0)
+
+        for i in abm.allids(model)
+            add_crossvoting_tocounter!(i, model)
+        end
+
+        push!(model.properties[:keep_probs], [])
+        #=In this loop agents deal with their new choice
+        #of candidate by updating their partyid =#
+        for i in abm.allids(model)
+            keep_prob = get_keep_party_id_prob(i,model)
+            push!(model.properties[:keep_probs][end], keep_prob)
+            update_partyid!(i,model,keep_prob)
+            model.properties[:voters_partyids][i] = model[i].myPartyId
+
+        end
+
+        newposs = get_new_parties_poss(model,
+                                       get_new_supporters(model,old_supporters),
+                                       old_supporters )
+
+        set_new_parties_poss!(model,newposs)
+
+    end
+    
+end
