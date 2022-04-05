@@ -1,7 +1,5 @@
 # * Party Label model
 
-
-
 #= This is a copy of the Party id model. Why am I copying
 it? Because the previous version is not wrong, but design needs to change. I
 still wanna play with the other version so I'll keep it. =#
@@ -15,13 +13,9 @@ Also, the update rule is completely different now.
 See the notes/sketchsofaModel/partyid-sketch.pdf design
 document for more on that.
 =#
-
 # ** Initial condition
 
-
 const bounds = (0,100)
-
-
 
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
@@ -77,7 +71,9 @@ function sample_1dnormal(bound, poss = overlap_50_poss)
     return(pos)
 end
 
+
 overlap_initializor(whichdist) = () -> sample_1dnormal((100., 5.), whichdist)
+
 
 function Voter(id::Int;nissues =  1,
                pos = () -> sample_uniform_pos(nssissues), κ = 10.)
@@ -85,6 +81,7 @@ function Voter(id::Int;nissues =  1,
     myPartyId = -3
     return(Voter{nissues}(id,pos(),amIaCandidate, κ, myPartyId))
 end
+
 
 
 function sample_parties_pos(nparties, model)
@@ -203,8 +200,6 @@ function get_plurality_result(primariesresult::Dict)
     return(d)
 end
 
-
-
 function get_plurality_result(m::abm.ABM, seconditer_switch=false)
     if seconditer_switch
         primariesresult = secondIt_get_primaries_votes(m)
@@ -299,10 +294,8 @@ function get_runoff_result(m, seconditer_switch = false)
     end
 
     return(runoffresult)
+
 end
-
-
-
 
 
 function set_candidates!(model, switch)
@@ -535,16 +528,6 @@ function initialize_incumbent_streak_counter!(m)
     m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = ntuple(x->0.,Val(m.properties[:nissues]))
 end
 
-function get_median_pos(m)
-    dims = m.properties[:nissues]
-    medians = Vector{Float64}()
-    for dim in 1:dims
-        dimmedian = Statistics.median([m[x].pos[dim] for x in  abm.allids(m)])
-        push!(medians, dimmedian)
-    end
-    return(medians)
- end
-
 @kwdef struct ModelParams
     nagents = 3000
     nparties = 2
@@ -675,7 +658,6 @@ end
 
 
 initialize_model(x::ModelParams) = initialize_model(;ntfromstruct(x)...)
-
 
 function assume_initial_partyid!(i, m)
     if (m.properties[:is_at_step] == 4) && (!in(i,m.properties[:parties_ids]))

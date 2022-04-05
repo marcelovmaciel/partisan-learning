@@ -6,7 +6,7 @@ using Revise
 import PartisanLearning as pl
 const is = pl.IssueSalience
 const pid = pl.PartyId
-const pla = pl.PartyLabel
+const pl.= pl.PartyLabel
 using InteractiveDynamics
 using GLMakie
 using Agents
@@ -26,7 +26,7 @@ agent_colors(a) = typeof(a) == is.Voter{2} ? "#2b2b33" :  "#bf2642"
 agent_size(a) = typeof(a) == is.Voter{2} ? 5 :  20
 
 m = model()
-pl.abm_play(
+pl.abm_pl.(
     m,
     is.abm.dummystep,
     is.model_step!,
@@ -94,7 +94,7 @@ m.properties[:partyids]
 
 ids = collect(allids(m))
 
-parties = pla.sample_parties_pos(2,m)
+parties = pl.sample_parties_pos(2,m)
 
 candidate = pid.StatsBase.sample(collect(nearby_ids(m[parties[1]].pos,m,0.1, exact = true)))
 
@@ -153,7 +153,7 @@ m = pid.initialize_model(1000,nissues, ncandidates)
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
 
-fig,stepper = pl.abm_play(
+fig,stepper = pl.abm_pl.(
     m,
     pid.abm.dummystep,
     pid.model_step!,
@@ -189,12 +189,12 @@ function newstep(m, foo = foo)
 end
 
 
-function abm_play!(fig, abmstepper, model, agent_step!, model_step!; spu,
+function abm_pl.!(fig, abmstepper, model, agent_step!, model_step!; spu,
                    newvartoplot, obsstepper)
     # preinitialize a bunch of stuff
     model0 = deepcopy(model)
     modelobs = Observable(model) # only useful for resetting
-    speed, slep, step, run, reset, = InteractiveDynamics.abm_controls_play!(fig, model, spu, false)
+    speed, slep, step, run, reset, = InteractiveDynamics.abm_controls_pl.!(fig, model, spu, false)
 
     #lift(x->newplotter(fig[newviewerpos...], x), collect(values(myobs.val))) # Add it to the figure
 
@@ -232,7 +232,7 @@ function obsstep(m)
     collect(values(m.properties[:partyids]))
 end
 
-abm_play!(fig,stepper, m, pid.abm.dummystep,
+abm_pl.!(fig,stepper, m, pid.abm.dummystep,
           newstep; newvartoplot = foo,
           obsstepper = obsstep, spu = 0.1)
 fig
@@ -264,7 +264,7 @@ ax, scat = scatter(fig[1,3],xs,ys)
 
 fig.layout
 
-fig2,stepper = pl.abm_play(
+fig2,stepper = pl.abm_pl.(
     m,
     pid.abm.dummystep,
     pid.model_step!,

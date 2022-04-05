@@ -118,8 +118,6 @@ about describing the comparative statics in a non-formal way.
 * DONE implement visualization of party polarization
 
 
-
-
 * TODO [#C] Create a representation gap incumbency advantage variant
  Right now the model is not presenting any interesting dynamics. Winning doesn't
  feedback into the system, nor the dissatisfaction of voters is taken into
@@ -151,6 +149,8 @@ the overlap between party distributions the more cross-party voting there should
 be. If that's not true then there's something wrong. Try running the model with
 different initial overlaps to see if the model does what it is supposed to do in
 the initial round before we have party loyalties kicking in.
+
+
 
 * DONE [#A] implement more concentrated distribution
 

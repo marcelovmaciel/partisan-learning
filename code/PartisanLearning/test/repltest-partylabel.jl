@@ -6,7 +6,7 @@ using Revise
 import PartisanLearning as pl
 const is = pl.IssueSalience
 const pid = pl.PartyId
-const pla = pl.PartyLabel
+const pl.= pl.PartyLabel
 using GLMakie
 using Agents
 import Distances
@@ -31,7 +31,7 @@ nissues = 2
 
 
 
-m = pla.initialize_model(1000,
+m = pl.initialize_model(1000,
                          nissues,
                          ncandidates,
                          δ=15,
@@ -41,8 +41,8 @@ m = pla.initialize_model(1000,
                          kappa_switch= :off,
                          special_bounds = (true, (100., 5.)),
                          voter_pos_initializor = () ->
-                             pla.sample_1dnormal((100., 5.),
-                                                 pla.standard_1d_poss ),
+                             pl.sample_1dnormal((100., 5.),
+                                                 pl.standard_1d_poss ),
                          party_pos_hardwired = false)
 
 
@@ -54,14 +54,14 @@ m.properties[:party_switches]
 visualize_simpler(m)
 
 for _ in 1:100
-    pla.model_step!(m)
+    pl.model_step!(m)
 end
 
 
-pla.dist.euclidean((0,2), (100,2))
+pl.dist.euclidean((0,2), (100,2))
 
 
-pla.dictmap(pla.proportionmap,(m.properties[:voterBallotTracker]))
+pl.dictmap(pl.proportionmap,(m.properties[:voterBallotTracker]))
 m.properties[:withinpartyshares]
 
 
@@ -72,7 +72,7 @@ m.properties[:withinpartyshares]
 
 # Save data for quick plotting
 
-for i in pla.abm.allids(m)
+for i in pl.abm.allids(m)
     m[i].myPartyId |> println
 end
 
@@ -92,13 +92,13 @@ visualize_model(m)
 
 m.properties[:κ]
 
-pla.model_step!(m)
+pl.model_step!(m)
 
 
 m[2]
 
-pla.dictmap(v->pla.get_mean_among_supporters(v,m),
-            pla.get_parties_supporters(m))
+pl.dictmap(v->pl.get_mean_among_supporters(v,m),
+            pl.get_parties_supporters(m))
 
 # ** Other tests
 
@@ -106,7 +106,7 @@ ncandidates = 10
 nissues = 5
 
 
-m = pla.initialize_model(1000,nissues,
+m = pl.initialize_model(1000,nissues,
                          ncandidates, δ = 1)
 
 
@@ -114,10 +114,10 @@ m = pla.initialize_model(1000,nissues,
 
 m[1] |> typeof |> fi
 
-pla.model_step!(m)
+pl.model_step!(m)
 
 
-pla.candidates_iteration_setup!(m)
+pl.candidates_iteration_setup!(m)
 
 proportion_peers_voteLikeMe2(1,m)
 
@@ -138,23 +138,23 @@ ncandidates = 5
 nissues = 2
 
 
-m = pla.initialize_model(1000,nissues,
+m = pl.initialize_model(1000,nissues,
                          ncandidates, δ = 1, κ=0.8)
 
 
 agent_colors(a) = a.id == m.properties[:incumbent]  ? :yellow : (a.amIaCandidate  ?  "#bf2642"  : "#2b2b33")
 agent_size(a) = a.id == m.properties[:incumbent]  ? 20 : (a.amIaCandidate ? 15 : 5)
 
-adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-         (a->(pla.get_distance_IvsParty(a,m)), pla.StatsBase.mean)]
+adata = [(a->(pl.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+         (a->(pl.get_distance_IvsParty(a,m)), pl.StatsBase.mean)]
 
 alabels = ["Voted Against PartyId", "dist(closest,party's)"]
 
 fig,adf,mdf = abm_data_exploration(m,
-                                   pla.abm.dummystep,
-                                   pla.model_step!,
+                                   pl.abm.dummystep,
+                                   pl.model_step!,
                                    Dict();
-                                   adata, pla.mdata,
+                                   adata, pl.mdata,
                                    alabels,
                                    ac = agent_colors,
                                    as = agent_size, spu = 1)
@@ -169,23 +169,23 @@ nissues = 2
 
 
 
-m = pla.initialize_model(1000,nissues, ncandidates, δ=5, κ = 28. , switch
+m = pl.initialize_model(1000,nissues, ncandidates, δ=5, κ = 28. , switch
     =:runoff, ω = 0.8, kappa_switch= :off,special_bounds = (true, (100., 5.)),
                          voter_pos_initializor = () ->
-                             pla.sample_1dnormal((100., 5.),
-                                                 pla.one_modal_dispersed ),
+                             pl.sample_1dnormal((100., 5.),
+                                                 pl.one_modal_dispersed ),
                          party_pos_hardwired = true)
 
-loyalty(i) = pla.get_keep_party_id_prob(i.id,m)
+loyalty(i) = pl.get_keep_party_id_prob(i.id,m)
 ideal_point(i) = i.pos[1]
 
 adata = [ideal_point, loyalty, :myPartyId]
 
 for i in 1:4
-    pla.model_step!(m)
+    pl.model_step!(m)
 end
 
-df,data_m= run!(m, pla.abm.dummystep, pla.model_step!, 1000; adata)
+df,data_m= run!(m, pl.abm.dummystep, pl.model_step!, 1000; adata)
 # CSV.write("../../../data/hardwired.csv", data_a)
 #df = CSV.read("../../../data/hardwired.csv", DataFrame)
 
@@ -223,7 +223,7 @@ nissues = 2
 
 
 
-m = pla.initialize_model(1000,
+m = pl.initialize_model(1000,
                          nissues,
                          ncandidates,
                          δ=30,
@@ -233,20 +233,20 @@ m = pla.initialize_model(1000,
                          kappa_switch= :off,
                          special_bounds = (true, (100., 5.)),
                          voter_pos_initializor = () ->
-                             pla.sample_1dnormal((100., 5.),
-                                                 pla.more_dispersed_1d_poss),
+                             pl.sample_1dnormal((100., 5.),
+                                                 pl.more_dispersed_1d_poss),
                          party_pos_hardwired = false)
 
-loyalty(i) = pla.get_keep_party_id_prob(i.id,m)
+loyalty(i) = pl.get_keep_party_id_prob(i.id,m)
 ideal_point(i) = i.pos[1]
 
 adata = [ideal_point, loyalty, :myPartyId]
 
 for i in 1:4
-    pla.model_step!(m)
+    pl.model_step!(m)
 end
 
-df,data_m= run!(m, pla.abm.dummystep, pla.model_step!, 20; adata)
+df,data_m= run!(m, pl.abm.dummystep, pl.model_step!, 20; adata)
 # CSV.write("../../../data/hardwired.csv", data_a)
 #df = CSV.read("../../../data/hardwired.csv", DataFrame)
 

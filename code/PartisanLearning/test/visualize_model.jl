@@ -20,22 +20,22 @@ using InteractiveDynamics
   # higher δ means parties sample further from their location.
   # both depended upon the underlying boundaries! think about that !!!
 
-  adata = [#(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-           (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+  adata = [#(a->(pl.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+           (a->(pl.get_distance_IvsPartyCandidate(a,m)), d -> pl.get_representativeness(d,m))]
 
   mdata = [
            x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
            x-> x.properties[:party_switches][end]/x.properties[:nagents],
            x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
-           pla.get_incumbent_eccentricity,
-           pla.get_mean_contestant_eccentricity]
-#pla.normalized_ENP,
+           pl.get_incumbent_eccentricity,
+           pl.get_mean_contestant_eccentricity]
+#pl.normalized_ENP,
   alabels = ["Rep"]
   mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 #"NENP",
   fig,adf,mdf = abm_data_exploration(m,
-                                     pla.abm.dummystep,
-                                     pla.model_step!,
+                                     pl.abm.dummystep,
+                                     pl.model_step!,
                                      params;
                                      adata, mdata,
                                      alabels,mlabels,
@@ -44,19 +44,19 @@ using InteractiveDynamics
                                      am = agent_marker,  spu = 1 )
 
 
-  partyproportions = pla.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
+  partyproportions = pl.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
   partyids = collect(keys(partyproportions))
   foo = Observable([partyproportions[p] for p in partyids])
 
 
   function newstep(m, foo = foo)
-      pla.model_step!(m)
-      partyproportions = pla.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
+      pl.model_step!(m)
+      partyproportions = pl.proportionmap([v for (k,v) in m.properties[:voters_partyids]])
       foo[] = [partyproportions[p] for p in partyids]
   end
 
   fig,adf,mdf = abm_data_exploration(m,
-                                     pla.abm.dummystep,
+                                     pl.abm.dummystep,
                                      newstep,
                                      params;
                                      adata, mdata,
@@ -70,15 +70,15 @@ using InteractiveDynamics
 end
 
 
-haveiswitched(agent::pla.Voter, m) = haveiswitched(agent.id,m)
+haveiswitched(agent::pl.Voter, m) = haveiswitched(agent.id,m)
 
 
 function visualize_simpler(m)
     # FIXME: getting a problem now that initial condition is only initial lol
-    pla.model_step!(m)
-     pla.model_step!(m)
-     pla.model_step!(m)
-    pla.model_step!(m)
+    pl.model_step!(m)
+     pl.model_step!(m)
+     pl.model_step!(m)
+    pl.model_step!(m)
 
 
     params = Dict(:κ => 0.0:1:100.0, :switch => [:random, :plurality, :runoff],
@@ -109,31 +109,31 @@ function visualize_simpler(m)
   # higher δ means parties sample further from their location.
   # both depended upon the underlying boundaries! think about that !!!
 
-   adata = [(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents])]
-  #          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+   adata = [(a->(pl.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents])]
+  #          (a->(pl.get_distance_IvsPartyCandidate(a,m)), d -> pl.get_representativeness(d,m))]
 
 
-  #  adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
+  #  adata = [(i->pl.get_keep_party_id_prob(i.id,m), pl.mean)]
     # mdata = [m-> m[m.properties[:parties_ids][1] ].pos[1],
       #       m -> m[m.properties[:parties_ids][2] ].pos[1],
-       #      pla.get_2candidates_distance]
+       #      pl.get_2candidates_distance]
         #[ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
-            #pla.get_incumbent_eccentricity,
-            #pla.get_mean_contestant_eccentricity]
+            #pl.get_incumbent_eccentricity,
+            #pl.get_mean_contestant_eccentricity]
 
   #          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
   #
   #          x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
-  #          pla.get_incumbent_eccentricity,
-  #          pla.get_mean_contestant_eccentricity]
-#pla.normalized_ENP,
+  #          pl.get_incumbent_eccentricity,
+  #          pl.get_mean_contestant_eccentricity]
+#pl.normalized_ENP,
     alabels = ["prop voting against party"]
     # mlabels = ["Party1Pos", "Party2Pos", "dist(c1,c2)"]
   # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 #"NENP",
   fig,adf,mdf = abm_data_exploration(m,
-                                     pla.abm.dummystep,
-                                     pla.model_step!,
+                                     pl.abm.dummystep,
+                                     pl.model_step!,
                                      params;
                                      adata,
         #                             mdata,
@@ -144,7 +144,7 @@ function visualize_simpler(m)
                                      am = agent_marker,  spu = 1:100 )
 
 
-  #keep_pid_probs = [pla.get_keep_party_id_prob(i,m) for i in  allids(m)]
+  #keep_pid_probs = [pl.get_keep_party_id_prob(i,m) for i in  allids(m)]
 
 
 
@@ -155,14 +155,14 @@ function visualize_simpler(m)
 
 
   # function newstep(m, foo = foo)
-  #     pla.model_step!(m)
-  #     keep_pid_probs = [pla.get_keep_party_id_prob(i,m) for i in  allids(m)]
+  #     pl.model_step!(m)
+  #     keep_pid_probs = [pl.get_keep_party_id_prob(i,m) for i in  allids(m)]
   #     foo[] = keep_pid_probs
 
   # end
 
   # fig,adf,mdf = abm_data_exploration(m,
-  #                                    pla.abm.dummystep,
+  #                                    pl.abm.dummystep,
   #                                    newstep,
   #                                    params;
   #                                       ac = agent_colors,
@@ -176,7 +176,7 @@ end
 
 function visualize_simpler_1d(m)
     # FIXME: getting a problem now that initial condition is only initial lol
-    pla.model_step!(m)
+    pl.model_step!(m)
 
     params = Dict(:κ => 0.0:1:100.0, :switch => [:random, :plurality, :runoff],
                   :δ => 0.0:5.:70,
@@ -202,21 +202,21 @@ function visualize_simpler_1d(m)
   # higher δ means parties sample further from their location.
   # both depended upon the underlying boundaries! think about that !!!
 
-  # adata = [#(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-  #          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+  # adata = [#(a->(pl.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+  #          (a->(pl.get_distance_IvsPartyCandidate(a,m)), d -> pl.get_representativeness(d,m))]
 
 
-    adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
+    adata = [(i->pl.get_keep_party_id_prob(i.id,m), pl.mean)]
     mdata = [ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
-            #pla.get_incumbent_eccentricity,
-            #pla.get_mean_contestant_eccentricity]
+            #pl.get_incumbent_eccentricity,
+            #pl.get_mean_contestant_eccentricity]
 
   #          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
   #
   #          x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
-  #          pla.get_incumbent_eccentricity,
-  #          pla.get_mean_contestant_eccentricity]
-#pla.normalized_ENP,
+  #          pl.get_incumbent_eccentricity,
+  #          pl.get_mean_contestant_eccentricity]
+#pl.normalized_ENP,
     alabels = ["keep party prob"]
     mlabels = ["PSwitches"]
   # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
@@ -225,8 +225,8 @@ function visualize_simpler_1d(m)
 
 
   fig,adf,mdf = abm_data_exploration(m,
-                                     pla.abm.dummystep,
-                                     pla.model_step!,
+                                     pl.abm.dummystep,
+                                     pl.model_step!,
                                      params;
                                      adata,
                                      mdata,
@@ -237,7 +237,7 @@ function visualize_simpler_1d(m)
                                      am = agent_marker,  spu = 1:100 )
 
 
-  #keep_pid_probs = [pla.get_keep_party_id_prob(i,m) for i in  allids(m)]
+  #keep_pid_probs = [pl.get_keep_party_id_prob(i,m) for i in  allids(m)]
 
 
 
@@ -250,14 +250,14 @@ function visualize_simpler_1d(m)
 
 
   function newstep(m, foo = foo)
-      pla.model_step!(m)
-      keep_pid_probs = [pla.get_keep_party_id_prob(i,m) for i in  allids(m)]
+      pl.model_step!(m)
+      keep_pid_probs = [pl.get_keep_party_id_prob(i,m) for i in  allids(m)]
       foo[] = keep_pid_probs
 
   end
 
   # fig,adf,mdf = abm_data_exploration(m,
-  #                                    pla.abm.dummystep,
+  #                                    pl.abm.dummystep,
   #                                    newstep,
   #                                    params;
   #                                       ac = agent_colors,
@@ -273,7 +273,7 @@ end
 
 function visualize_noslider(m, spu = 1:100)
     # FIXME: getting a problem now that initial condition is only initial lol
-    pla.model_step!(m)
+    pl.model_step!(m)
 
     function agent_colors(a)
 
@@ -294,28 +294,28 @@ function visualize_noslider(m, spu = 1:100)
   # higher δ means parties sample further from their location.
   # both depended upon the underlying boundaries! think about that !!!
 
-  # adata = [#(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-  #          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+  # adata = [#(a->(pl.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+  #          (a->(pl.get_distance_IvsPartyCandidate(a,m)), d -> pl.get_representativeness(d,m))]
 
 
-    adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
+    adata = [(i->pl.get_keep_party_id_prob(i.id,m), pl.mean)]
     mdata = [ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
-            #pla.get_incumbent_eccentricity,
-            #pla.get_mean_contestant_eccentricity]
+            #pl.get_incumbent_eccentricity,
+            #pl.get_mean_contestant_eccentricity]
 
   #          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
   #
   #          x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
-  #          pla.get_incumbent_eccentricity,
-  #          pla.get_mean_contestant_eccentricity]
-#pla.normalized_ENP,
+  #          pl.get_incumbent_eccentricity,
+  #          pl.get_mean_contestant_eccentricity]
+#pl.normalized_ENP,
     alabels = ["keep party prob"]
     mlabels = ["PSwitches"]
   # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 #"NENP",
   fig,adf,mdf = abm_data_exploration(m,
-                                     pla.abm.dummystep,
-                                     pla.model_step!;
+                                     pl.abm.dummystep,
+                                     pl.model_step!;
                                      adata,
                                      mdata,
                                      alabels,
@@ -337,7 +337,7 @@ end
 
 function visualize_simpler_pluscustom(m)
     # FIXME: getting a problem now that initial condition is only initial lol
-    pla.model_step!(m)
+    pl.model_step!(m)
 
     params = Dict(:κ => 0.0:5:100.0, :switch => [:random, :plurality, :runoff],
                   :δ => 0.0:10:70,
@@ -363,26 +363,26 @@ function visualize_simpler_pluscustom(m)
   # higher δ means parties sample further from their location.
   # both depended upon the underlying boundaries! think about that !!!
 
-  # adata = [#(a->(pla.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
-  #          (a->(pla.get_distance_IvsPartyCandidate(a,m)), d -> pla.get_representativeness(d,m))]
+  # adata = [#(a->(pl.HaveIVotedAgainstMyParty(a,m)), x-> count(x)/m.properties[:nagents]),
+  #          (a->(pl.get_distance_IvsPartyCandidate(a,m)), d -> pl.get_representativeness(d,m))]
 
 
-    adata = [(i->pla.get_keep_party_id_prob(i.id,m), pla.mean)]
+    adata = [(i->pl.get_keep_party_id_prob(i.id,m), pl.mean)]
     mdata = [ x-> x.properties[:party_switches][end]/x.properties[:nagents]]
 
   #          x->x.properties[:incumbent_streak_counter].longest_streak[:streak_value],
   #
   #          x-> x.properties[:incumbent_streak_counter].has_switchedlist[end],
-  #          pla.get_incumbent_eccentricity,
-  #          pla.get_mean_contestant_eccentricity]
-#pla.normalized_ENP,
+  #          pl.get_incumbent_eccentricity,
+  #          pl.get_mean_contestant_eccentricity]
+#pl.normalized_ENP,
     alabels = ["keep party prob"]
     mlabels = ["PSwitches"]
   # mlabels = [ "IStreaks", "PSwitches","iSwitch", "ie", "ce"]
 #"NENP",
   fig,adf,mdf = abm_data_exploration(m,
-                                     pla.abm.dummystep,
-                                     pla.model_step!,
+                                     pl.abm.dummystep,
+                                     pl.model_step!,
                                      params;
                                      # adata,
                                      # mdata,
@@ -394,14 +394,14 @@ function visualize_simpler_pluscustom(m)
 
 
 
-    keep_pid_probs = [Observable([convert(Float32,pla.get_keep_party_id_prob(i,m))])
+    keep_pid_probs = [Observable([convert(Float32,pl.get_keep_party_id_prob(i,m))])
                       for i in  allids(m)]
     N = Observable([Float32(0.)])
 
 
   function newstep(m, keep_pid_probs = keep_pid_probs, N = N)
-      pla.model_step!(m)
-      probs = [convert(Float32,pla.get_keep_party_id_prob(i,m)) for i in  allids(m)]
+      pl.model_step!(m)
+      probs = [convert(Float32,pl.get_keep_party_id_prob(i,m)) for i in  allids(m)]
       for (i,v) in enumerate(probs)
      keep_pid_probs[i][] = [v]
       end
@@ -409,7 +409,7 @@ function visualize_simpler_pluscustom(m)
   end
 
   fig,adf,mdf = abm_data_exploration(m,
-                                     pla.abm.dummystep,
+                                     pl.abm.dummystep,
                                      newstep,
                                      params;
                                         ac = agent_colors,
@@ -432,16 +432,16 @@ end
 
 
 function visualize_m(m)
-    pla.model_step!(m)
+    pl.model_step!(m)
     fig,adf,mdf = abm_data_exploration(m,
-                                       pla.abm.dummystep,
-                                       pla.model_step!)
-    var_wanna_observe = [Observable([pla.get_keep_party_id_prob(i,m)])
+                                       pl.abm.dummystep,
+                                       pl.model_step!)
+    var_wanna_observe = [Observable([pl.get_keep_party_id_prob(i,m)])
                                     for i in  allids(m)]
     nsteps = Observable([0.])
     function newstep(m, var_wanna_observe = var_wanna_observe, nsteps = nsteps)
-        pla.model_step!(m)
-        var_values = [pla.get_keep_party_id_prob(i,m) for i in  allids(m)]
+        pl.model_step!(m)
+        var_values = [pl.get_keep_party_id_prob(i,m) for i in  allids(m)]
         for (i,v) in enumerate(var_values)
             push!(var_wanna_observe[i].val, v)
         end

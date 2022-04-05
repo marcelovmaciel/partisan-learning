@@ -1,20 +1,14 @@
 
-# ** Data Collection
-#=
+function get_median_pos(m)
+    dims = m.properties[:nissues]
+    medians = Vector{Float64}()
+    for dim in 1:dims
+        dimmedian = Statistics.median([m[x].pos[dim] for x in  abm.allids(m)])
+        push!(medians, dimmedian)
+    end
+    return(medians)
+ end
 
-FIXME: Test what happens with the  proportion of voters who voted against PartyId candidate
-
-Maybe also some measures of the distribution? Who knows....
-
-• for how long candidate remains winning.
-• The proportion of voters voted for someone who was not their party
-candidate.
-• What is the distance between the candidate the agent voted for and
-the candidate of their party.
-=#
-
-
-#adata = [(a->(HaveIVotedAgainstMyParty(a,m)), +)]
 
 function get_distance_MyCandidatevsPartyCandidate(agentid, model)
 

@@ -6,7 +6,7 @@ JULIA_PYTHONCALL_EXE = "/home/marcelovmaciel/miniconda3/bin/python"
 
 using Revise
 import PartisanLearning as pl
-const pla = pl.PartyLabel
+const pl.= pl.PartyLabel
 import CSV
 using Base.Filesystem
 using GLMakie
@@ -19,7 +19,7 @@ PythonCall.Deps.add(conda_channels = ["conda-forge"],
 
 varnames =  ["ncandidates",  "κ", "δ"]
 bounds = [[2.,15.], [0.,7.], [0.5,7.]]
-testdict = pla.saltellidict(varnames,bounds)
+testdict = pl.saltellidict(varnames,bounds)
 
 outputnames = ["Eccentricity",
                    "NENP",
@@ -27,11 +27,11 @@ outputnames = ["Eccentricity",
                    "Representativeness", "LongestIStreak"]
 
 designmatrix = CSV.read("../../../data/saltelli_matrix.csv",
-                        pla.DF.DataFrame)
+                        pl.DF.DataFrame)
 
 
 outputmatrix = CSV.read("../../../data/output_matrix.csv",
-                        pla.DF.DataFrame)
+                        pl.DF.DataFrame)
 
 PythonCall.Py(outputmatrix[!,outputnames[1]])
 
