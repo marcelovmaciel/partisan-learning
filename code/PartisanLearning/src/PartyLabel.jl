@@ -1,36 +1,32 @@
-# * Party Label model
+# I wont to go beyond the benefit of the doubt model;
+# *  Some base defs conts
 
-#= This is a copy of the Party id model. Why am I copying
-it? Because the previous version is not wrong, but design needs to change. I
-still wanna play with the other version so I'll keep it. =#
-#=
-What will change in this version?
-I'll need to add some sticky parties,
-rather than having parties as a latent thing
-in the model. So this changes the initial condition.
-I'll also need to change how people set their party position...
-Also, the update rule is completely different now.
-See the notes/sketchsofaModel/partyid-sketch.pdf design
-document for more on that.
-=#
-# ** Initial condition
+const bounds = (0, 100)
+const oneDBound = (100., 5.)
 
-const bounds = (0,100)
+abstract type GeneralVoter <: abm.AbstractAgent
 
 mutable struct Voter{n} <: abm.AbstractAgent
     id::Int
     pos::NTuple{n,Float64}
     amIaCandidate::Bool
-    κ::Float64
     myPartyId::Int
+    κ::Float64
 end
 
+# * Sampling agents positions
+
+#this works for any number of dims
 function sample_uniform_pos(nissues = 2)
 Tuple(rand(distri.Uniform(bounds...),nissues))
 end
 
+# ** 1d agents' pos samplers
+# I feel like I can generalize this later!
+
 OVL(test_cohend) = 2*distri.cdf(distri.Normal(),
                                 -abs(test_cohend)/2)
+
 one_modal_dispersed = (distri.Normal(50,25),
                        distri.Normal(50,25))
 
@@ -38,10 +34,10 @@ overlap_50_poss = (distri.Normal(43.25,10), distri.Normal(56.75,10))
 overlap_80_poss = (distri.Normal(47.5,10),distri.Normal(52.5,10) )
 overlap_20_poss = (distri.Normal(37.25, 10), distri.Normal(62.75,10))
 
-
 more_dispersed_1d_poss = (distri.Normal(50 - 20.25/2,15),
                           distri.Normal(50 + 20.25/2,15))
 
+# HACK: this gotta be generalized! ASAP
 function sample_1dnormal(bound, poss = overlap_50_poss)
 
     #= - I'll simply put a constant in one dimension and work on the other
@@ -72,18 +68,26 @@ function sample_1dnormal(bound, poss = overlap_50_poss)
 end
 
 
-overlap_initializor(whichdist) = () -> sample_1dnormal((100., 5.), whichdist)
+function overlap_initializor(whichdist)
+    () -> sample_1dnormal(oneDBound,
+                          whichdist)
+end
+
+function uniform_initializor(nissues)
+() -> sample_uniform_pos(nssissues)
+end
 
 
+# ** nissues sampling
+# TODO: see if this pos initializor is correct
 function Voter(id::Int;nissues =  1,
-               pos = () -> sample_uniform_pos(nssissues), κ = 10.)
+               pos = uniform_initializor, κ = 10.)
     amIaCandidate = false
     myPartyId = -3
     return(Voter{nissues}(id,pos(),amIaCandidate, κ, myPartyId))
 end
 
-
-
+# this works for any nymber of dimensions
 function sample_parties_pos(nparties, model)
     ids = collect(abm.allids(model))
 
@@ -93,25 +97,76 @@ function sample_parties_pos(nparties, model)
                                          :partycandidate => -1,
                                          :δ => model.properties[:δ]),
                                 partiesposs)
-
-
     return(actualpartiesposs)
 end
+
+
+# * Getting parties supporters
+
+function get_parties_supporters(model)
+    Dict(
+        Pair(k,
+             collect(keys(filter(t->t[2]==k,
+                    model.properties[:voters_partyids]))))
+        for k in model.properties[:parties_ids])
+end
+
+function secondIt_get_parties_supporters(model)
+    overall_placeholder = []
+    for k in model.properties[:parties_ids]
+        placeholder = []
+        for agent in abm.allids(model)
+            if model.properties[:voterBallotTracker][agent][end] == k
+                push!(placeholder, agent)
+            end
+            push!(overall_placeholder, Pair(k, placeholder))
+        end
+    end
+        return(Dict(overall_placeholder))
+end
+
+# FIXME: this should be after the model intitialized!
+function will_I_turnout(i,m)
+
+    if >(m.properties[:is_at_step],1) &&  <(m.properties[:is_at_step], 4)
+        lastvote = m.properties[:voterBallotTracker][i][end]
+        will_I = <(rand(distri.Uniform(0.75,1)),
+                   proportionmap(m.properties[:voterBallotTracker][i])[lastvote])
+
+    else
+
+        voter = m[i]
+
+        voterballot = m.properties[:voterBallotTracker][i]
+
+        proportion_votesi = proportionmap(voterballot)
+
+
+        if !(voter.myPartyId in
+         keys(proportion_votesi))
+        proportionvoted_for_party = 0.0
+        else
+            proportionvoted_for_party = proportion_votesi[voter.myPartyId]
+        end
+
+        will_I = rand(distri.Uniform(0.75,1)) < proportionvoted_for_party
+    end
+
+    return(will_I)
+end
+
+
+function get_supporters_who_turnout(supporters,m)
+    filter(i->will_I_turnout(i,m),supporters)
+end
+
+# * Sampling candidates
+
 
 function simple_sample_candidates(party, m, n=1)
     sample(
         collect(abm.nearby_ids(m[party], m, m.properties[:δ],
                                   exact = true)),n)
-end
-
-function simple_select_primariesCandidates(model::abm.ABM, n =1)
-
-    party_candidate_pairs = (
-        model.properties[:parties_ids] .|>
-            (pid -> Pair(pid,simple_sample_candidates(pid,model, n))) |>
-            Dict)
-
-      return(party_candidate_pairs)
 end
 
 
@@ -176,6 +231,18 @@ function sample_candidates(party, m)
 
 end
 
+# * Candidates selection
+
+# ** Primaries candidates selection
+function simple_select_primariesCandidates(model::abm.ABM, n =1)
+
+    party_candidate_pairs = (
+        model.properties[:parties_ids] .|>
+            (pid -> Pair(pid,simple_sample_candidates(pid,model, n))) |>
+            Dict)
+
+      return(party_candidate_pairs)
+end
 
 function select_primariesCandidates(model::abm.ABM)
     party_candidate_pairs = (
@@ -185,6 +252,8 @@ function select_primariesCandidates(model::abm.ABM)
 
       return(party_candidate_pairs)
 end
+
+# ** Primaries Voting Procedures
 
 function get_plurality_result(primariesresult::Dict)
 
@@ -338,6 +407,8 @@ function set_candidates!(model, switch)
 end
 
 
+# ** Getting closest candidate for each voter
+
 "get_closest_candidate(agentid::Int, model::abm.ABM)"
 function get_closest_candidate(agentid::Int,model)
 
@@ -380,66 +451,12 @@ function get_closest_fromList(agentid,candidate_list,model)
     return(candidateid)
 end
 
-function secondIt_get_parties_supporters(model)
-    overall_placeholder = []
-    for k in model.properties[:parties_ids]
-        placeholder = []
-        for agent in abm.allids(model)
-            if model.properties[:voterBallotTracker][agent][end] == k
-                push!(placeholder, agent)
-            end
-            push!(overall_placeholder, Pair(k, placeholder))
-        end
-    end
-        return(Dict(overall_placeholder))
-end
 
+#
 
-function will_I_turnout(i,m)
+# ** Getting primaries votes
 
-    if >(m.properties[:is_at_step],1) &&  <(m.properties[:is_at_step], 4)
-        lastvote = m.properties[:voterBallotTracker][i][end]
-        will_I = <(rand(distri.Uniform(0.75,1)),
-                   proportionmap(m.properties[:voterBallotTracker][i])[lastvote])
-
-    else
-
-        voter = m[i]
-
-        voterballot = m.properties[:voterBallotTracker][i]
-
-        proportion_votesi = proportionmap(voterballot)
-
-
-        if !(voter.myPartyId in
-         keys(proportion_votesi))
-        proportionvoted_for_party = 0.0
-        else
-            proportionvoted_for_party = proportion_votesi[voter.myPartyId]
-        end
-
-        will_I = rand(distri.Uniform(0.75,1)) < proportionvoted_for_party
-    end
-
-    return(will_I)
-end
-
-
-function get_supporters_who_turnout(supporters,m)
-    filter(i->will_I_turnout(i,m),supporters)
-end
-
-
-function get_parties_supporters(model)
-    Dict(
-        Pair(k,
-             collect(keys(filter(t->t[2]==k,
-                    model.properties[:voters_partyids]))))
-        for k in model.properties[:parties_ids])
-end
-
-
-function secondIt_get_primaries_votes(m,
+    function secondIt_get_primaries_votes(m,
                                       primariesCandidatesDict = simple_select_primariesCandidates(m,4))
 
     all_parties_supporters = secondIt_get_parties_supporters(m)
@@ -476,6 +493,8 @@ function get_primaries_votes(m, primariesCandidatesDict)
 end
 
 
+
+# * Getting who would win
 
 "getmostvoted(model::abm.ABM)"
 function getmostvoted(model::abm.ABM, initial_or_iteration = :initial)
@@ -518,8 +537,14 @@ mutable struct StreakCounter
     longest_streak::Dict # will hold both streak_value and incumbent_position
 end
 
-DummyStreakCounter() = StreakCounter(1,Vector{Bool}(), 0, Dict(:streak_value => 0,
-                                                                 :incumbent_pos => (0,)))
+# FIXME: this is an within model measure
+# TODO: think how to generalize this to any model!
+
+DummyStreakCounter() = StreakCounter(1,
+                                     Vector{Bool}(),
+                                     0,
+                                     Dict(:streak_value => 0,
+                                          :incumbent_pos => (0,)))
 
 function initialize_incumbent_streak_counter!(m)
     m.properties[:incumbent_streak_counter].old_incumbentholder = 0
@@ -528,6 +553,10 @@ function initialize_incumbent_streak_counter!(m)
     m.properties[:incumbent_streak_counter].longest_streak[:incumbent_pos] = ntuple(x->0.,Val(m.properties[:nissues]))
 end
 
+
+# * Initializing the model
+
+# TODO: every model type should have one such constructor!
 @kwdef struct ModelParams
     nagents = 3000
     nparties = 2
@@ -659,6 +688,8 @@ end
 
 initialize_model(x::ModelParams) = initialize_model(;ntfromstruct(x)...)
 
+# * Stepping
+
 function assume_initial_partyid!(i, m)
     if (m.properties[:is_at_step] == 4) && (!in(i,m.properties[:parties_ids]))
     pairs = collect(proportionmap(m.properties[:voterBallotTracker][i]))
@@ -672,15 +703,9 @@ function assume_initial_partyid!(i, m)
     end
 end
 
-# ** Stepping
-#=
-there is some sublety here.
-#basicamente na iteracao vai ter dois tipos de calculo de distancia pra cada
-agente ele quer saber quem ele ta mais proximo em termos de posicao DELE MAS
-tambem quem que ta mais proximo da partyid dele entao ele considera dois
-candidatos se o candidato mais proximo dele 'e tipo muito mais proximo que o
-candidato do partido, uma contante kappa, ele vota no outro
-=#
+
+
+
 
 
 "reset_candidates!(model::abm.ABM)"
@@ -778,6 +803,7 @@ function update_partyid!(agentid,model,
     end
 end
 
+
 function update_streakCounter!(m)
     if m.properties[:incumbent_party] != m.properties[:incumbent_streak_counter].old_incumbentholder
         push!(m.properties[:incumbent_streak_counter].has_switchedlist, true)
@@ -792,6 +818,9 @@ function update_streakCounter!(m)
         m.properties[:incumbent_streak_counter].longest_streak[:streak_value] = m.properties[:incumbent_streak_counter].current_streak
     end
 end
+
+
+
 
 # this only makes sense AFTER updating the agent partyid
 # but BEFORE updating the global voters_partyids
@@ -932,3 +961,4 @@ function model_step!(model)
 end
 
 foursteps!(m) =  for _ in 1:4 model_step!(m) end
+
