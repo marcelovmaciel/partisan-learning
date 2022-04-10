@@ -1,6 +1,6 @@
 import Pkg
 
-Pkg.activate("../")
+Pkg.activate("../PartisanLearning")
 
 using Revise
 import PartisanLearning as pl
@@ -11,9 +11,15 @@ m_params = pl.ModelParams()
 
 m = pl.initialize_model(m_params)
 
-# * Vis functions
-fig,f = single_interactive_vis(m)
+pl.foursteps!(m)
 
+
+pl.sample_parties_pos(2,m)
+
+# * Vis functions
+fig,f = pl.single_interactive_vis(m)
+
+fig
 
 overlap20df = collect_per_overlap(pl.overlap_20_poss)
 
