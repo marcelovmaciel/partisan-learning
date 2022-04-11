@@ -150,8 +150,6 @@ be. If that's not true then there's something wrong. Try running the model with
 different initial overlaps to see if the model does what it is supposed to do in
 the initial round before we have party loyalties kicking in.
 
-
-
 * DONE [#A] implement more concentrated distribution
 
 * DONE [#B] Run small pipeline comparing the three distributions

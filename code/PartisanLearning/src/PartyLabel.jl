@@ -53,19 +53,19 @@ function sample_overlapping_normal(nissues, poss)
 
     pos = general_sampling(nissues,d)
     
-    map(pos) do p   
+    function correctbounds(p)    
         if p < 0.0
-                p = 0.01
-            elseif p > 100
-                p = 99.999
-            end
+            p = 0.01
+        elseif p > 100
+            p = 99.999 
         end
-return(pos)
+        return(p)    
+    end    
+    pos = correctbounds.(pos)
+    return(pos)
 end
 
 sample_overlapping_normal(d) = sample_overlapping(1,d)
-
-
 
 function sample_overlapping_2d_to_1d_hack(d)
     (first(sample_overlapping_normal(1,d)), oneDBound[2]/2)
@@ -186,11 +186,6 @@ end
 
 # * Sampling candidates for primaries 
 
-function simple_sample_candidates(party, m, n=1)
-    sample(
-        collect(abm.nearby_ids(m[party], m, m.properties[:δ],
-                                  exact = true)),n)
-end
 
 function get_party_randomCandidate_dict(m)
     parties_supporters = get_parties_supporters(m)
@@ -203,13 +198,13 @@ function get_party_randomCandidate_dict(m)
     end
 end
 
-function initial_steps_candidate_sampling(party,m)
+function initial_steps_candidate_sampling(party,m, n)
     nearby_agents = collect(abm.nearby_ids(m[party],m,
      m.properties[:δ], exact = true))
 
     (isempty(nearby_agents) ? 
-    fill(party, (4,1)) :
-    sample(nearby_agents,4))
+    fill(party, (n,1)) :
+    sample(nearby_agents,n))
 
 end 
 
@@ -239,7 +234,7 @@ function party_candidate_Dict_generator(sampler, model)
 end
 
 function simple_select_primariesCandidates(model, n) 
-    party_candidate_Dict_generator((p,m)-> simple_sample_candidates(p,m,n), 
+    party_candidate_Dict_generator((p,m)->  initial_steps_candidate_sampling(p,m,n), 
     model)
 end
 
@@ -590,7 +585,11 @@ end
 function add_agents!(model, nagents, nissues, voter_pos_initializor)
     
     for i in 1:nagents
-        vi = Voter(i, nissues=nissues, pos = voter_pos_initializor(),  κ = model.properties[:κ])
+    
+
+        pos = voter_pos_initializor()
+        vi = Voter(i, nissues=nissues, pos = pos,  κ = model.properties[:κ])
+        
         abm.add_agent_pos!(vi, model)
     end
 end

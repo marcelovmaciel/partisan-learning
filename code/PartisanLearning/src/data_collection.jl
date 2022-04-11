@@ -1,5 +1,95 @@
 datapath = "../../../data"
 
+
+
+function get_data_initial_dist(params, nsteps= 20)
+
+    m = initialize_model(params)
+
+    foursteps!(m)
+    function loyalty(i) 
+    loyalty(i.id,m)   # FIXME: I don't know why this is not working
+    end 
+    adata = [ f_ideal_point]
+
+    mdata = [prop_pswitch,
+             mean_loyalty,
+             prop_crossvoting,
+             get_2candidates_distance, 
+             get_mean_contestant_eccentricity,
+             get_incumbent_eccentricity]
+
+    data_a,data_m= abm.run!(m,
+                    abm.dummystep,
+                    model_step!, nsteps;
+                    adata,
+                    mdata)
+    return(data_a, data_m)
+end
+
+
+function collect_runs(params)
+    holdermdf = DF.DataFrame([Int64[],
+                          Float64[],
+                          Int64[],
+                          Float64[],
+                          Float64[],
+                          Float64[], 
+                          Float64[],
+                          Float64[]],
+                         [:step,
+                          :prop_pswitch,
+                          :iter,
+                          :mean_loyalty,
+                          :prop_crossvoting,
+                          :get_2candidates_distance, 
+                          :get_mean_contestant_eccentricity,
+                          :get_incumbent_eccentricity])
+    holder_adf = DF.DataFrame(
+        [Int64[], Int64[], Int64[], Float64[]],
+        [:step, :id, :iter,  :f_ideal_point])
+    
+    @showprogress 1 "Running "  for i in 1:100
+        adf,mdf = get_data_initial_dist(params)
+        
+        mdf[!,:iter] = [i for _ in 1:DF.nrow(mdf)]
+
+        holdermdf = vcat(holdermdf,
+                        mdf)
+        adf[!,:iter] = [i for _ in 1:DF.nrow(adf)]
+        
+        println(names(holder_adf))
+        println(names(adf))
+        holder_adf = vcat(holder_adf,
+                        adf)
+
+    end
+
+    return(holderadf, holdermdf)
+end
+
+
+function collect_per_overlap(whichdist, sampler)
+
+ModelParams(voter_pos_initializor = hold(sampler, whichdist)) |>
+        collect_runs
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # * FIXME: all code below is rotten
 # only use it for inspiration!
 function saltellidict(varnames::Vector{String}, bounds)

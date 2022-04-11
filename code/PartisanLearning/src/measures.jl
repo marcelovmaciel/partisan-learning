@@ -75,6 +75,7 @@ end
 
 
 
+
 function get_party_supporters_mean(pid, m, whichdim = 1 )
     party_supporters = get_parties_supporters(m)[pid]
     mean(vcat(map(x->collect(m[x].pos[whichdim]), party_supporters)...))
@@ -91,13 +92,14 @@ function get_2candidates_distance(m)
                    candidate2_pos)
 end
 
-
 function mean_loyalty(m)
 [get_keep_party_id_prob(i,m) for i in abm.allids(m)] |>  mean
         end
 
-loyalty(i) = get_keep_party_id_prob(i.id,m)
-f_ideal_point(i) = i.pos[1]
+loyalty(i::Voter, m) = get_keep_party_id_prob(i.id,m) # FIXME: badly designed function 
+loyalty(i::Int, m) = get_keep_party_id_prob(i,m)
+f_ideal_point(i::Int, m) = m[i].pos[1]
+f_ideal_point(i::Voter) = i.pos[1]
 
 function prop_pswitch(m)
     m.properties[:party_switches][end]/m.properties[:nagents]

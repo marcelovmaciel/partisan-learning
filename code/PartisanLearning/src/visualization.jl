@@ -72,7 +72,7 @@ function get_data_initial_dist(params, nsteps= 20)
              prop_crossvoting,
              get_2candidates_distance]
 
-    _,data_m= run!(m,
+    _,data_m= abm.run!(m,
                     abm.dummystep,
                     model_step!, nsteps;
                     adata,
@@ -84,7 +84,7 @@ end
 
 function collect_runs(params)
 
-    holderdf = DataFrame([Int64[],
+    holderdf = DF.DataFrame([Int64[],
                           Float64[],
                           Int64[],
                           Float64[],
@@ -109,9 +109,8 @@ function collect_runs(params)
 end
 
 
-function collect_per_overlap(whichdist)
-    (whichdist |>
-        overlap_initializor |>
-        x-> ModelParams(voter_pos_initializor = x) |>
-        collect_runs)
+function collect_per_overlap(whichdist, sampler)
+
+ModelParams(voter_pos_initializor = hold(sampler, whichdist)) |>
+        collect_runs
 end
