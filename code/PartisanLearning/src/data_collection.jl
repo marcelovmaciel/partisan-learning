@@ -1,16 +1,18 @@
 datapath = "../../../data"
 
 
-
 function get_data_initial_dist(params, nsteps= 20)
 
-    m = initialize_model(params)
+    model = initialize_model(params)
 
-    foursteps!(m)
+    foursteps!(model)
+    
     function loyalty(i) 
-    loyalty(i.id,m)   # FIXME: I don't know why this is not working
+    loyalty(i,
+    model)   # FIXME: I don't know why this is not working
     end 
-    adata = [ f_ideal_point]
+
+    adata = [f_ideal_point,fuba]
 
     mdata = [prop_pswitch,
              mean_loyalty,
@@ -19,7 +21,7 @@ function get_data_initial_dist(params, nsteps= 20)
              get_mean_contestant_eccentricity,
              get_incumbent_eccentricity]
 
-    data_a,data_m= abm.run!(m,
+    data_a,data_m= abm.run!(model,
                     abm.dummystep,
                     model_step!, nsteps;
                     adata,
@@ -29,7 +31,7 @@ end
 
 
 function collect_runs(params)
-    holdermdf = DF.DataFrame([Int64[],
+    holder_mdf = DF.DataFrame([Int64[],
                           Float64[],
                           Int64[],
                           Float64[],
@@ -45,27 +47,32 @@ function collect_runs(params)
                           :get_2candidates_distance, 
                           :get_mean_contestant_eccentricity,
                           :get_incumbent_eccentricity])
+    
     holder_adf = DF.DataFrame(
-        [Int64[], Int64[], Int64[], Float64[]],
-        [:step, :id, :iter,  :f_ideal_point])
+            [Int64[], Int64[], Int64[], Float64[], Float64[]],
+            [:step, :id, :iter,  :f_ideal_point, :loyalty])
     
     @showprogress 1 "Running "  for i in 1:100
         adf,mdf = get_data_initial_dist(params)
         
         mdf[!,:iter] = [i for _ in 1:DF.nrow(mdf)]
 
-        holdermdf = vcat(holdermdf,
-                        mdf)
-        adf[!,:iter] = [i for _ in 1:DF.nrow(adf)]
         
-        println(names(holder_adf))
-        println(names(adf))
+        holder_mdf = vcat(holder_mdf,
+                        mdf)
+        adf.iter = [i for _ in 1:DF.nrow(adf)]           
+
         holder_adf = vcat(holder_adf,
-                        adf)
+                        adf, cols = :union)
 
     end
+    
+    holder_adf.loyalty = (holder_adf[!, names(o50adf)[end]] |> 
+                         skipmissing |> 
+                         collect)
+    DF.select!(holder_adf, pl.DF.Not(names(holder_adf)[end]))
+    return(holder_adf, holder_mdf)
 
-    return(holderadf, holdermdf)
 end
 
 

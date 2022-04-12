@@ -19,9 +19,9 @@ fig,f = pl.single_interactive_vis(m); fig
 
 o20adf,o20mdf = pl.collect_per_overlap(pl.overlap_20_poss, pl.sample_overlapping_2d_to_1d_hack)
 
-overlap50df = collect_per_overlap(pl.overlap_50_poss)
+overlap50df = pl.collect_per_overlap(pl.overlap_50_poss, pl.sample_overlapping_2d_to_1d_hack)
 
-overlap80df = collect_per_overlap(pl.overlap_80_poss)
+overlap80df = pl.collect_per_overlap(pl.overlap_80_poss, pl.sample_overlapping_2d_to_1d_hack)
 
 function concat_overlap_data(f,s,t)
 
