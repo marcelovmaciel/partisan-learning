@@ -162,7 +162,7 @@ the initial round before we have party loyalties kicking in.
   - Candidates Should Become more Extreme;
   - Those who turnout should be more extreme WITH TIME!;
 
-* TODO [#A] *Weight party id* in defining party position;
+* DONE [#A] *Weight party id* in defining party position;
 
 * PROJ [#A] Redesign this
 

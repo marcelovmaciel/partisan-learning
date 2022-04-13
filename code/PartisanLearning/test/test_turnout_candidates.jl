@@ -1,27 +1,27 @@
 import Pkg
 
 Pkg.activate("../PartisanLearning")
-
 using Revise
 import PartisanLearning as pl
 
 # include("../test/visualize_model.jl")
 
-m_params = pl.ModelParams()
+m_params = pl.ModelParams(κ = 23, 
+voter_pos_initializor = pl.hold(pl.sample_overlapping_2d_to_1d_hack,
+pl.overlap_20_poss))
 
 m = pl.initialize_model(m_params)
-
-pl.foursteps!(m)
 
 # * Vis functions
 fig,f = pl.single_interactive_vis(m); fig 
 
-
 o20adf,o20mdf = pl.collect_per_overlap(pl.overlap_20_poss, pl.sample_overlapping_2d_to_1d_hack)
 
-overlap50df = pl.collect_per_overlap(pl.overlap_50_poss, pl.sample_overlapping_2d_to_1d_hack)
+o50adf,o50mdf = pl.collect_per_overlap(pl.overlap_50_poss, pl.sample_overlapping_2d_to_1d_hack)
 
 overlap80df = pl.collect_per_overlap(pl.overlap_80_poss, pl.sample_overlapping_2d_to_1d_hack)
+
+pl.StatsBase.mean([1,2,3], pl.StatsBase.Weights([1,2,3]))
 
 function concat_overlap_data(f,s,t)
 

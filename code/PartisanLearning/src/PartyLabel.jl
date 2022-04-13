@@ -198,7 +198,7 @@ function get_party_randomCandidate_dict(m)
     end
 end
 
-function initial_steps_candidate_sampling(party,m, n)
+function initial_steps_candidate_sampling(party,m, n=1)
     nearby_agents = collect(abm.nearby_ids(m[party],m,
      m.properties[:δ], exact = true))
 
@@ -223,7 +223,7 @@ function sample_candidates(party, m)
     if m.properties[:is_at_step] >=4
         normal_steps_candidate_sampling(party,m)
     else
-        initial_steps_candidate_sampling(party,m)
+        initial_steps_candidate_sampling(party,m )
     end
 end
 
@@ -347,6 +347,9 @@ function get_runoff_result(m, seconditer_switch = false)
     return(runoffresult)
 
 end
+
+
+
 
 # FIXME: This is impossible to extend and gotta change
 # Val types might help me!  
@@ -639,6 +642,7 @@ function initialize_vpids_tracker(model)
         for x in abm.allids(model))
 end
 
+
 function initialize_ballot_trackers(model)
     model.properties[:voterBallotTracker] = Dict((k,Int64[]) for (k,_) in model.properties[:voters_partyids])
 end 
@@ -839,13 +843,17 @@ function get_new_supporters(model, old_supporters)
     return(new_supporters)
 end
 
-function get_mean_among_supporters(supporters::Vector, model)
-
-        [mean(model[i].pos[issue]
-              for i in supporters)
+function get_mean_among_supporters(supporters::Vector,
+     model,
+      weights)
+        [mean([model[i].pos[issue]
+              for i in supporters], weights)
          for issue in 1:model.properties[:nissues]]
 end
 
+
+
+#= 
 function get_new_parties_poss(model, new_supporters, old_supporters)
     ω = model.properties[:ω]
 
@@ -858,12 +866,22 @@ function get_new_parties_poss(model, new_supporters, old_supporters)
     kvdictmap((k,v)-> (ω .* v .+ ((1-ω) .* mean_new_supporters[k])) |> Tuple, mean_previous_supporters )
 
 end
-
+=#
 function set_new_parties_poss!(model,newpposs)
     for (k,v) in newpposs
         model[k].pos = v
         model.properties[:parties_candidateid_ppos_δ][k][:partyposition] = v
     end
+end 
+
+function get_new_parties_poss(model)
+    supporters =  get_parties_supporters(model)
+    loyalties(listofagents) = map(a -> loyalty(a,model), listofagents )
+    weightsdict = dictmap(l -> Weights(loyalties(l)), supporters)
+    newppossdict = kvdictmap((k,v)->Tuple(get_mean_among_supporters(v,model, weightsdict[k])),
+    supporters )
+    println(newppossdict)
+    return(newppossdict)
 end
 
 function set_agent_new_κ!(agentid,model)
@@ -965,11 +983,9 @@ function update_partyids!(model)
     end
 end 
 
-# fortunately this will most likely disappear
-function update_new_parties_poss!(model, old_supporters)
-    newposs = get_new_parties_poss(model,
-    get_new_supporters(model,old_supporters), 
-    old_supporters)
+
+function update_new_parties_poss!(model)
+    newposs = get_new_parties_poss(model)
     set_new_parties_poss!(model,newposs)
 end
 
@@ -982,7 +998,6 @@ end
 function model_actual_loop!(model)
         assume_initial_partyid!(model)
         candidates_iteration_setup!(model)
-        old_supporters = get_parties_supporters(model) |> copy
         set_agents_new_κ!(model)
         turn_currrent_incumbent_into_old!(model)
         update_incumbent!(model)
@@ -992,7 +1007,7 @@ function model_actual_loop!(model)
         update_cross_voting_tracker!(model)
         update_keep_probs_tracker!(model)
         update_partyids!(model)
-        update_new_parties_poss!(model,  old_supporters)
+        update_new_parties_poss!(model)
 end
 
 function model_step!(model)
