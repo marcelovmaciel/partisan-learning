@@ -163,6 +163,6 @@ the initial round before we have party loyalties kicking in.
   - Those who turnout should be more extreme WITH TIME!;
 
 * DONE [#A] *Weight party id* in defining party position;
-
+- sooo done 
 * PROJ [#A] Redesign this
 
