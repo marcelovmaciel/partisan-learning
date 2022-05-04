@@ -157,12 +157,20 @@ the initial round before we have party loyalties kicking in.
 
 * DONE [#A] Pick candidates from turnout voters
 
-* TODO [#A] Write pipelines to test for those 3 expected behaviors!
+* DONE [#A] Write pipelines to test for those 3 expected behaviors!
   - Extremists must evolve to have stronger party ids;
   - Candidates Should Become more Extreme;
   - Those who turnout should be more extreme WITH TIME!;
-
 * DONE [#A] *Weight party id* in defining party position;
-- sooo done 
+
 * PROJ [#A] Redesign this
 
+* TODO [#A] New design
+Re 1.  We need to fix the design issue that makes extremists only marginally more likely to be party loyalists.  One way might be to manipulate the probabilities in a clearly non-linear way, so that unless you always have voted for a given party, your party loyalty remains low. Maybe also you need to build in both raw number of times of agreement and percentage of agreement.   Also, I think we start somebody off with a party ID and always measure things in terms of deviation from that original ID. That should simplify the bookkeeping.
+
+* TODO [#B] New Trackers / Data Collection
+
+
+- (1)  the actual location of the candidates,
+- (2) the changes in the party ID of the voters as a function of their current and  previous votes,
+-  (3)  vote choices vis- a-vis the candidates as a function of ideology and party ID,, so as to verify that  the formulas for (a) change in party ID, and (b) the  way in which the locations of the candidates is determined by current party ID and or immediate past voting behavior work the way they are support.

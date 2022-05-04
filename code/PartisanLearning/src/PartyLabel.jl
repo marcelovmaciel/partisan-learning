@@ -880,7 +880,7 @@ function get_new_parties_poss(model)
     weightsdict = dictmap(l -> Weights(loyalties(l)), supporters)
     newppossdict = kvdictmap((k,v)->Tuple(get_mean_among_supporters(v,model, weightsdict[k])),
     supporters )
-    println(newppossdict)
+    
     return(newppossdict)
 end
 

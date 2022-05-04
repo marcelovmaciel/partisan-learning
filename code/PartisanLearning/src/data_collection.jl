@@ -7,9 +7,8 @@ function get_data_initial_dist(params, nsteps= 20)
 
     foursteps!(model)
     
-    function loyalty(i) 
-    loyalty(i,
-    model)   # FIXME: I don't know why this is not working
+    function fuba(i) 
+    loyalty(i,model)   # FIXME: I don't know why this is not working
     end 
 
     adata = [f_ideal_point,fuba]
@@ -50,9 +49,9 @@ function collect_runs(params)
     
     holder_adf = DF.DataFrame(
             [Int64[], Int64[], Int64[], Float64[], Float64[]],
-            [:step, :id, :iter,  :f_ideal_point, :loyalty])
+            [:step, :id, :iter,  :f_ideal_point, :fuba])
     
-    @showprogress 1 "Running "  for i in 1:100
+    @showprogress 1 "Running:"  for i in 1:100
         adf,mdf = get_data_initial_dist(params)
         
         mdf[!,:iter] = [i for _ in 1:DF.nrow(mdf)]
@@ -67,10 +66,10 @@ function collect_runs(params)
 
     end
     
-    holder_adf.loyalty = (holder_adf[!, names(o50adf)[end]] |> 
+    holder_adf.loyalty = (holder_adf[!, names(holder_adf)[end]] |> 
                          skipmissing |> 
                          collect)
-    DF.select!(holder_adf, pl.DF.Not(names(holder_adf)[end]))
+    DF.select!(holder_adf, DF.Not(names(holder_adf)[end]))
     return(holder_adf, holder_mdf)
 
 end
@@ -85,7 +84,15 @@ end
 
 
 
-
+function fixcols(df) 
+    weird_name = names(df)[end] 
+    fuba =  names(df)[end-1] 
+     df.loyalty = (df[!, names(df)[end]] |>
+       skipmissing |> 
+        collect)
+    DF.select!(df, DF.Not(weird_name))
+   DF.select!(df, DF.Not(fuba))
+end
 
 
 

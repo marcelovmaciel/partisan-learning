@@ -31,7 +31,6 @@ function single_interactive_vis(m)
     az(a) = agent_size(a,m)
     am(a) = agent_marker(a,m)
     ac(a) = agent_colors_2parties(a,m)
-    println("got here")
     adata = [(a->(get_distance_IvsPartyCandidate(a,m)), d -> get_representativeness(d,m))]
 
     mdata =  [get_2candidates_distance, prop_pswitch, mean_loyalty]
